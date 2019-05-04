@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<windowclass name="combattracker_host" merge="join">
+		<sheetdata>
+			<label_ct name="label_nonlethal" merge="delete" />
+			<label_ct name="label_wounds" insertbefore="button_global_targeting">
+				<anchored position="insidetopright" offset="228,38" width="30" />
+				<static textres="ct_label_strain" />
+				<tooltip textres="ct_tooltip_strain" />
+				<center />
+			</label_ct>
+            <label_ct name="label_injury" insertbefore="button_global_targeting">
+                <anchored position="insidetopright" offset="188,38" width="30" />
+                <static textres="ct_label_injury" />
+                <tooltip textres="ct_tooltip_injury" />
+                <center />
+            </label_ct>
+		</sheetdata>
+	</windowclass>
+	
+	<windowclass name="ct_entry" merge="join">
+		<script file="ct/scripts/ct_entry.lua" />
+		<sheetdata>
+			<number_ct_crosslink name="nonlethal" merge="delete" />
+			<number_ct_crosslink name="injury" insertbefore="wounds">
+				<anchored to="rightanchor" width="30" height="20">
+					<top />
+					<right anchor="left" relation="relative" offset="-10" />
+				</anchored>
+				<hideonvalue value="0" />
+				<tabtarget prev="wounds" next="init" />
+				<script>
+					function handleDrop(draginfo)
+						if draginfo.getType() == "number" then
+							local node = window.getDatabaseNode();
+							local rActor = ActorManager.getActorFromCT(node);
+							ActionDamage.applyDamage(nil, rActor, CombatManager.isCTHidden(node), "number", draginfo.getDescription(), draginfo.getNumberData());
+						end
+					end
+
+					function update()
+						window.onHealthChanged();
+					end
+				</script>
+			</number_ct_crosslink>
+            <number_ct_crosslink name="wounds">
+                <anchored to="rightanchor" width="30" height="20">
+                    <top />
+                    <right anchor="left" relation="relative" offset="-10" />
+                </anchored>
+                <hideonvalue value="0" />
+                <tabtarget prev="hptemp" next="injury" />
+                <script>
+                    function handleDrop(draginfo)
+                        if draginfo.getType() == "number" then
+                            local node = window.getDatabaseNode();
+                            local rActor = ActorManager.getActorFromCT(node);
+                            ActionDamage.applyDamage(nil, rActor, CombatManager.isCTHidden(node), "number", draginfo.getDescription(), draginfo.getNumberData());
+                        end
+                    end
+
+					function update()
+						window.onHealthChanged();
+					end
+				</script>
+			</number_ct_crosslink>
+		</sheetdata>
+	</windowclass>
+</root>
