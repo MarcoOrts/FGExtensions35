@@ -90,26 +90,7 @@ function onTargeting(rSource, aTargeting, rRolls)
 	return aTargeting;
 end
 
-function performPartySheetVsRoll(draginfo, rActor, rAction)
-	local rRoll = getRoll(nil, rAction);
-	
-	if DB.getValue("partysheet.hiderollresults", 0) == 1 then
-		rRoll.bSecret = true;
-		rRoll.bTower = true;
-	end
-	
-	ActionsManager.actionDirect(nil, "attack", { rRoll }, { { rActor } });
-end
-
-function performRoll(draginfo, rActor, rAction)
-	Debug.console("performRoll");
-	local rRoll = getRoll(rActor, rAction);
-	
-	ActionsManager.performAction(draginfo, rActor, rRoll);
-end
-
 function getRoll(rActor, rAction)
-	Debug.console("getRoll");
 	local rRoll = {};
 	if rAction.cm then
 		rRoll.sType = "grapple";
@@ -118,16 +99,6 @@ function getRoll(rActor, rAction)
 	end
 	rRoll.aDice = { "d20" };
 	rRoll.nMod = rAction.modifier or 0;
-	
-	-- Divine Power Extension xBzGrumpyCat
-	if EffectManager35E.hasEffectCondition(rActor,"DIVPOW") then
-		local sActorType, nodeActor = ActorManager.getTypeAndNode(rActor);
-		local nLevel = DB.getValue(nodeActor, "level", 0);
-		local nBAB = DB.getValue(nodeActor, "attackbonus.base", 0);
-		Debug.console(nBAB);
-		rRoll.nMod = rRoll.nMod - nBAB + nLevel;
-	end
-	-- Divine Power Extension
 	
 	if rAction.cm then
 		rRoll.sDesc = "[CMB";
@@ -157,8 +128,16 @@ function getRoll(rActor, rAction)
 	end
 	
 	-- Add other modifiers
-	if rAction.crit and rAction.crit < 20 then
-		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rAction.crit .. "]";
+    local rActionCrit = rAction.crit;
+    if EffectManager35E.hasEffect(rActor, "KEEN") then
+        if rActionCrit then
+            rActionCrit = 20 - ((20 - rActionCrit + 1) * 2) + 1;
+        else
+            rActionCrit = 19;
+        end
+    end
+	if rActionCrit and rActionCrit < 20 then
+		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rActionCrit .. "]";
 	end
 	if rAction.touch then
 		rRoll.sDesc = rRoll.sDesc .. " [TOUCH]";
@@ -167,29 +146,17 @@ function getRoll(rActor, rAction)
 	return rRoll;
 end
 
-function performGrappleRoll(draginfo, rActor, rAction)
-	Debug.console("performGrappleRoll");
-	local rRoll = getGrappleRoll(rActor, rAction);
+function performRoll(draginfo, rActor, rAction)
+	local rRoll = getRoll(rActor, rAction);
 	
 	ActionsManager.performAction(draginfo, rActor, rRoll);
 end
 
 function getGrappleRoll(rActor, rAction)
-	Debug.console("getGrappleRoll");
 	local rRoll = {};
 	rRoll.sType = "grapple";
 	rRoll.aDice = { "d20" };
 	rRoll.nMod = rAction.modifier or 0;
-	
-	-- Divine Power Extension xBzGrumpyCat
-	if EffectManager35E.hasEffectCondition(rActor,"DIVPOW") then
-		local sActorType, nodeActor = ActorManager.getTypeAndNode(rActor);
-		local nLevel = DB.getValue(nodeActor, "level", 0);
-		local nBAB = DB.getValue(nodeActor, "attackbonus.base", 0);
-		Debug.console(nBAB);
-		rRoll.nMod = rRoll.nMod - nBAB + nLevel;
-	end
-	-- Divine Power Extension
 	
 	if DataCommon.isPFRPG() then
 		rRoll.sDesc = "[CMB]";
@@ -211,6 +178,12 @@ function getGrappleRoll(rActor, rAction)
 	end
 	
 	return rRoll;
+end
+
+function performGrappleRoll(draginfo, rActor, rAction)
+	local rRoll = getGrappleRoll(rActor, rAction);
+	
+	ActionsManager.performAction(draginfo, rActor, rRoll);
 end
 
 function modAttack(rSource, rTarget, rRoll)
@@ -553,7 +526,7 @@ function onAttack(rSource, rTarget, rRoll)
 		bRollMissChance = true;
 	else
 		if rAction.bCritThreat then
-			local rCritConfirmRoll = { sType = "critconfirm", aDice = {"d20"}, bTower = rRoll.bTower, bSecret = rRoll.bSecret };
+			local rCritConfirmRoll = { sType = "critconfirm", aDice = {"d20"} };
 			
 			local nCCMod = EffectManager35E.getEffectsBonus(rSource, {"CC"}, true, nil, rTarget);
 			if nCCMod ~= 0 then
@@ -581,7 +554,7 @@ function onAttack(rSource, rTarget, rRoll)
 	end
 
 	if rTarget then
-		notifyApplyAttack(rSource, rTarget, rRoll.bTower, rRoll.sType, rRoll.sDesc, rAction.nTotal, table.concat(rAction.aMessages, " "));
+		notifyApplyAttack(rSource, rTarget, rMessage.secret, rRoll.sType, rRoll.sDesc, rAction.nTotal, table.concat(rAction.aMessages, " "));
 		
 		-- REMOVE TARGET ON MISS OPTION
 		if (rAction.sResult == "miss" or rAction.sResult == "fumble") and rRoll.sType ~= "critconfirm" and not string.match(rRoll.sDesc, "%[FULL%]") then
@@ -615,7 +588,7 @@ function onGrapple(rSource, rTarget, rRoll)
 		local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
 		
 		if rTarget then
-			rMessage.text = rMessage.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
+			rMessage.text = rMessage.text .. " [at " .. rTarget.sName .. "]";
 		end
 		
 		if not rSource then
@@ -662,8 +635,8 @@ function applyAttack(rSource, rTarget, bSecret, sAttackType, sDesc, nTotal, sRes
 		msgLong.text = "Attack [" .. nTotal .. "] ->";
 	end
 	if rTarget then
-		msgShort.text = msgShort.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
-		msgLong.text = msgLong.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
+		msgShort.text = msgShort.text .. " [at " .. rTarget.sName .. "]";
+		msgLong.text = msgLong.text .. " [at " .. rTarget.sName .. "]";
 	end
 	if sResults ~= "" then
 		msgLong.text = msgLong.text .. " " .. sResults;
@@ -682,7 +655,7 @@ function applyAttack(rSource, rTarget, bSecret, sAttackType, sDesc, nTotal, sRes
 		msgLong.icon = "roll_attack";
 	end
 		
-	ActionsManager.outputResult(bSecret, rSource, rTarget, msgLong, msgShort);
+	ActionsManager.messageResult(bSecret, rSource, rTarget, msgLong, msgShort);
 end
 
 aCritState = {};
