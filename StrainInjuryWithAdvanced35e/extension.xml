@@ -10,8 +10,8 @@
 		</ruleset>
 	</properties>
 	<base>
-    
-    <!-- Initialization -->
+		<!-- Another Test Comment -->
+<!-- Initialization -->
     <script name="StrainInjury" file="scripts/straininjury.lua" />
     
     <!-- Strings -->
