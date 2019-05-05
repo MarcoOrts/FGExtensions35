@@ -10,7 +10,7 @@
 		</ruleset>
 	</properties>
 	<base>
-    
+    <!-- Test Comment -->
     <!-- Initialization -->
     <script name="StrainInjury" file="scripts/straininjury.lua" />
     
@@ -52,3 +52,4 @@
 
   </base>
 </root>
+
