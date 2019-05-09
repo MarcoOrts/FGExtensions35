@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<windowclass name="modifiers" merge="join">
+		<sheetdata>			
+            <button_modifierkey name="DMG_INJURY" insertbefore="DEF_PCOVER">
+                <bounds>35,300,75,20</bounds>
+                <textres>modifier_label_dmginjury</textres>
+            </button_modifierkey>
+		</sheetdata>
+	</windowclass>
+</root>

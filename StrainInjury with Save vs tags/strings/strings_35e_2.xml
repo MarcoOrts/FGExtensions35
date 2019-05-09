@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+
+  <!-- Combat Tracker -->
+  <string name="ct_label_strain">Strn</string>
+  <string name="ct_label_injury">Inj</string>
+  
+  <string name="ct_tooltip_strain">Strain</string>
+  <string name="ct_tooltip_injury">Injury</string>
+
+  <!-- Modifiers -->
+  <string name="modifier_label_dmginjury">Injury</string>
+
+  <!-- Character - Mini -->
+  <string name="charmini_label_strain">Strn</string>
+  <string name="charmini_label_injury">Inj</string>
+
+  <!-- Character - Main -->
+  <string name="char_label_strain">Strain</string>
+  <string name="char_label_injury">Injury</string>
+
+  <string name="char_tooltip_strain">Strain</string>
+  <string name="char_tooltip_injury">Injury</string>
+
+</root>
