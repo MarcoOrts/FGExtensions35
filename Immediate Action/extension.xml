@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root version="3.0" release="1">
+  <properties>
+    <name>Immediate Action</name>
+    <version>1</version>
+    <author>Kelrugem</author>
+    <description>Immediate actions refreshed at the end of ones turn.</description>
+    <ruleset>
+      <name>3.5E</name>
+    </ruleset>
+    <ruleset>
+      <name>PFRPG</name>
+    </ruleset>
+  </properties>
+  <base>
+    <!-- Initialization -->
+    <script name="Immediate Action" file="scripts/Immediate_Action.lua" />
+
+    <!-- High-level scripts -->
+    <script name="Combat2" file="scripts/manager_combat2.lua" />
+  </base>
+</root>
