@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root version="3.0" release="1">
+  <properties>
+    <name>HRESIST</name>
+    <version>1</version>
+    <author>Kelrugem</author>
+    <description>Effect to half the damage of damage types; also a bug fix for applying correct order of HRESIST, RESIST and VULN effects.</description>
+    <ruleset>
+      <name>3.5E</name>
+    </ruleset>
+    <ruleset>
+      <name>PFRPG</name>
+    </ruleset>
+  </properties>
+  <base>
+    <!-- Initialization -->
+    <script name="HRESIST" file="scripts/HRESIST.lua" />
+
+    <!-- High-level scripts -->
+    <script name="ActionDamage" file="scripts/manager_action_damage.lua" />
+  </base>
+</root>
