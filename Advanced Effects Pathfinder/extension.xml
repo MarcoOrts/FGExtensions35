@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root version="3.0" release="1">
+  <properties>
+    <name>Advanced Pathfinder</name>
+    <version>1</version>
+    <author>Kelrugem</author>
+    <description>Effects for fortification and to half the damage of damage types; also a bug fix for applying correct order of FORTIF, HRESIST, RESIST and VULN effects. Immediate actions refreshed at the end of ones turn. Added ghost touch.</description>
+    <ruleset>
+      <name>PFRPG</name>
+    </ruleset>
+  </properties>
+  <base>
+    <!-- Initialization -->
+    <script name="FortifImmHresist" file="scripts/Fortif_Imm_Hresist.lua" />
+
+    <!-- High-level scripts -->
+    <script name="ActionDamage" file="scripts/manager_action_damage.lua" />
+	<script name="CombatManager2" file="scripts/manager_combat2.lua" />
+	<script name="ActorManager2" file="scripts/manager_actor2.lua" />
+	<script name="DataCommon" file="scripts/data_common.lua" />
+  </base>
+</root>
