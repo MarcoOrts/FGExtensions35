@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root version="3.0" release="1">
+  <properties>
+    <name>Save versus tags</name>
+    <version>1</version>
+    <author>Kelrugem</author>
+    <description>Use IF: CUSTOM ([tags]) with other effects</description>
+    <ruleset>
+      <name>3.5E</name>
+    </ruleset>
+	<ruleset>
+      <name>PFRPG</name>
+    </ruleset>
+  </properties>
+  <base>
+    <!-- Initialization -->
+    <script name="SaveVersusTags" file="scripts/save_versus_tags.lua" />
+	
+	<!-- Strings -->
+	<includefile source="strings/strings_35e.xml" />
+	
+	<!-- Campaign Records -->
+	<includefile source="campaign/record_spell_roll.xml" />
+	
+    <!-- High-level scripts -->
+	<script name="SpellManager" file="scripts/manager_spell.lua" />
+	<script name="ActionSave" file="scripts/manager_action_save.lua" />
+	<script name="ActionSpell" file="scripts/manager_action_spell.lua" />
+  </base>
+</root>
