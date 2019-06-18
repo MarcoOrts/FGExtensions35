@@ -840,12 +840,21 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 		
 		-- GET DEFENDER SITUATIONAL MODIFIERS - CONCEALMENT
 		local aConceal = EffectManager35E.getEffectsByType(rDefender, "TCONC", aAttackFilter, rAttacker);
+		-- Variable concealment
+		local aVConcealEffect, aVConcealCount = EffectManager35E.getEffectsBonusByType(rDefender, "VCONC", true, aAttackFilter, rAttacker);
+		
+		if aVConcealCount > 0 then
+			for _,v in  pairs(aVConcealEffect) do
+				nMissChance = math.max(v.mod,nMissChance);
+			end
+		end
+		-- END variable concealment but math.max in the following ifs needed such that CONC and TCONC etc. do not overwrite VCONC and only maximum value is taken
 		if #aConceal > 0 or EffectManager35E.hasEffect(rDefender, "TCONC", rAttacker) or bTotalConceal or bAttackerBlinded then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		else
 			aConceal = EffectManager35E.getEffectsByType(rDefender, "CONC", aAttackFilter, rAttacker);
 			if #aConceal > 0 or EffectManager35E.hasEffect(rDefender, "CONC", rAttacker) or bConceal then
-				nMissChance = 20;
+				nMissChance = math.max(20,nMissChance);
 			end
 		end
 		
@@ -855,23 +864,23 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 			local bGhostTouchAttacker = EffectManager35E.hasEffect(rAttacker, "ghost touch", rDefender);
 
 			if bIncorporealDefender and not bGhostTouchAttacker and not bIncorporealAttack then
-				nMissChance = 50;
+				nMissChance = math.max(50,nMissChance);
 			end
 		end
 		
 		-- ADD IN EFFECT MODIFIERS
 		nDefenseEffectMod = nBonusAC + nBonusStat + nBonusSituational;
 	
-	-- NO DEFENDER SPECIFIED, SO JUST LOOK AT THE ATTACK ROLL MODIFIERS
+	-- NO DEFENDER SPECIFIED, SO JUST LOOK AT THE ATTACK ROLL MODIFIERS, here no math.max needed but to be sure...
 	else
 		if bTotalConceal or bAttackerBlinded then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		elseif bConceal then
-			nMissChance = 20;
+			nMissChance = math.max(20,nMissChance);
 		end
 		
 		if bIncorporealAttack then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		end
 	end
 	
