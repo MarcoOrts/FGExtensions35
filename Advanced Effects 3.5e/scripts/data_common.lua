@@ -385,7 +385,6 @@ bonustypes = {
 	"deflection",
 	"dodge",
 	"enhancement",
-	"ghost",
 	"insight",
 	"luck",
 	"morale",
@@ -402,7 +401,6 @@ bonustypes = {
 stackablebonustypes = {
 	"circumstance",
 	"dodge",
-	"ghost"
 };
 
 -- Armor class bonus types

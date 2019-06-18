@@ -1102,3 +1102,19 @@ function isCreatureType(rActor, sTypeCheck)
 	end
 	return bReturn;
 end
+
+function applyStableEffect(rActor)
+	if EffectManager35E.hasEffectCondition(rActor, "Stable") then return; end
+	
+	local nodeCT = ActorManager.getCTNode(rActor);
+	local aEffect = { sName = "Stable", nDuration = 0 };
+	if ActorManager.getFaction(rActor) ~= "friend" then
+		aEffect.nGMOnly = 1;
+	end
+	EffectManager.addEffect("", "", nodeCT, aEffect, true);
+end
+
+function removeStableEffect(rActor)
+	local nodeCT = ActorManager.getCTNode(rActor);
+	EffectManager.removeEffect(nodeCT, "Stable");
+end

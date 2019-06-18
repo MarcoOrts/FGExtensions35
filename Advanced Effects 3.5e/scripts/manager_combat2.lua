@@ -36,19 +36,17 @@ function onTurnEnd(nodeEntry)
 		return;
 	end
 	
-	-- Handle end of turn changes
+	-- KEL: Handle end of turn changes
 	DB.setValue(nodeEntry, "immediate", "number", 0);
 	
 	-- Check for stabilization (based on option)
 	local sOptionHRST = OptionsManager.getOption("HRST");
 	if sOptionHRST ~= "off" then
 		if (sOptionHRST == "all") or (DB.getValue(nodeEntry, "friendfoe", "") == "friend") then
-			local nHP = DB.getValue(nodeEntry, "hp", 0);
-			local nWounds = DB.getValue(nodeEntry, "wounds", 0);
-			local rActor = ActorManager.getActorFromCT(nodeEntry);
-			local nDying = GameSystem.getDeathThreshold(rActor);
-			if nHP > 0 and nWounds > nHP and nWounds < nHP + nDying then
-				if not EffectManager35E.hasEffect(rActor, "Stable") then
+			local _,_,sStatus = ActorManager2.getPercentWounded("ct", nodeEntry);
+			if sStatus == "Dying" then
+				local rActor = ActorManager.getActorFromCT(nodeEntry);
+				if not EffectManager35E.hasEffectCondition(rActor, "Stable") then
 					ActionDamage.performStabilizationRoll(rActor);
 				end
 			end

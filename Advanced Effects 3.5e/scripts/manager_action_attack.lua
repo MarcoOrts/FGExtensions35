@@ -90,14 +90,25 @@ function onTargeting(rSource, aTargeting, rRolls)
 	return aTargeting;
 end
 
+function performPartySheetVsRoll(draginfo, rActor, rAction)
+	local rRoll = getRoll(nil, rAction);
+	
+	if DB.getValue("partysheet.hiderollresults", 0) == 1 then
+		rRoll.bSecret = true;
+		rRoll.bTower = true;
+	end
+	
+	ActionsManager.actionDirect(nil, "attack", { rRoll }, { { rActor } });
+end
+
+function performRoll(draginfo, rActor, rAction)
+	local rRoll = getRoll(rActor, rAction);
+	
+	ActionsManager.performAction(draginfo, rActor, rRoll);
+end
+
 function getRoll(rActor, rAction)
 	local rRoll = {};
-	-- Save overlay only for spell actions
-	local rRoll.spell = false;
-	if rAction.spell then
-		rRoll.spell = rAction.spell;
-	end
-	--
 	if rAction.cm then
 		rRoll.sType = "grapple";
 	else
@@ -134,7 +145,7 @@ function getRoll(rActor, rAction)
 	end
 	
 	-- Add other modifiers
-    local rActionCrit = rAction.crit;
+	local rActionCrit = rAction.crit;
     if EffectManager35E.hasEffect(rActor, "KEEN") then
         if rActionCrit then
             rActionCrit = 20 - ((20 - rActionCrit + 1) * 2) + 1;
@@ -142,8 +153,8 @@ function getRoll(rActor, rAction)
             rActionCrit = 19;
         end
     end
-	if rActionCrit and rActionCrit < 20 then
-		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rActionCrit .. "]";
+	if rAction.crit and rAction.crit < 20 then
+		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rAction.crit .. "]";
 	end
 	if rAction.touch then
 		rRoll.sDesc = rRoll.sDesc .. " [TOUCH]";
@@ -152,8 +163,8 @@ function getRoll(rActor, rAction)
 	return rRoll;
 end
 
-function performRoll(draginfo, rActor, rAction)
-	local rRoll = getRoll(rActor, rAction);
+function performGrappleRoll(draginfo, rActor, rAction)
+	local rRoll = getGrappleRoll(rActor, rAction);
 	
 	ActionsManager.performAction(draginfo, rActor, rRoll);
 end
@@ -184,12 +195,6 @@ function getGrappleRoll(rActor, rAction)
 	end
 	
 	return rRoll;
-end
-
-function performGrappleRoll(draginfo, rActor, rAction)
-	local rRoll = getGrappleRoll(rActor, rAction);
-	
-	ActionsManager.performAction(draginfo, rActor, rRoll);
 end
 
 function modAttack(rSource, rTarget, rRoll)
@@ -532,7 +537,7 @@ function onAttack(rSource, rTarget, rRoll)
 		bRollMissChance = true;
 	else
 		if rAction.bCritThreat then
-			local rCritConfirmRoll = { sType = "critconfirm", aDice = {"d20"} };
+			local rCritConfirmRoll = { sType = "critconfirm", aDice = {"d20"}, bTower = rRoll.bTower, bSecret = rRoll.bSecret };
 			
 			local nCCMod = EffectManager35E.getEffectsBonus(rSource, {"CC"}, true, nil, rTarget);
 			if nCCMod ~= 0 then
@@ -565,16 +570,9 @@ function onAttack(rSource, rTarget, rRoll)
 		local rMissChanceRoll = { sType = "misschance", sDesc = rRoll.sDesc .. " [MISS CHANCE " .. nMissChance .. "%]", aDice = { "d100", "d10" }, nMod = 0, fullattack = FullAttack };
 		ActionsManager.roll(rSource, rTarget, rMissChanceRoll);
 	end
-	
-	-- Save overlay
-	if (rAction.sResult == "miss" or rAction.sResult == "fumble") and rRoll.sType ~= "critconfirm" and rRoll.spell then
-		TokenManager2.setSaveOverlay(ActorManager.getCTNode(rTarget), 1);
-	elseif (rAction.sResult == "hit" or rAction.sResult == "crit") and rRoll.sType ~= "critconfirm" and rRoll.spell and (TokenManager2.getSaveOverlay(ActorManager.getCTNode(rTarget)) ~= 1 and TokenManager2.getSaveOverlay(ActorManager.getCTNode(rTarget)) ~= 3) then
-		TokenManager2.setSaveOverlay(ActorManager.getCTNode(rTarget), 2);
-	end
-	
+
 	if rTarget then
-		notifyApplyAttack(rSource, rTarget, rMessage.secret, rRoll.sType, rRoll.sDesc, rAction.nTotal, table.concat(rAction.aMessages, " "));
+		notifyApplyAttack(rSource, rTarget, rRoll.bTower, rRoll.sType, rRoll.sDesc, rAction.nTotal, table.concat(rAction.aMessages, " "));
 		
 		-- REMOVE TARGET ON MISS OPTION
 		if (rAction.sResult == "miss" or rAction.sResult == "fumble") and rRoll.sType ~= "critconfirm" and not string.match(rRoll.sDesc, "%[FULL%]") then
@@ -608,7 +606,7 @@ function onGrapple(rSource, rTarget, rRoll)
 		local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
 		
 		if rTarget then
-			rMessage.text = rMessage.text .. " [at " .. rTarget.sName .. "]";
+			rMessage.text = rMessage.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
 		end
 		
 		if not rSource then
@@ -642,7 +640,7 @@ function onMissChance(rSource, rTarget, rRoll)
 		end
 	end
 	-- KEL Remove TARGET
-	if rTarget and not rRoll.fullattack then		
+	if rTarget and rRoll.fullattack == "false" then		
 		-- REMOVE TARGET ON MISS OPTION
 		if removeVar then
 			local bRemoveTarget = false;
@@ -673,8 +671,8 @@ function applyAttack(rSource, rTarget, bSecret, sAttackType, sDesc, nTotal, sRes
 		msgLong.text = "Attack [" .. nTotal .. "] ->";
 	end
 	if rTarget then
-		msgShort.text = msgShort.text .. " [at " .. rTarget.sName .. "]";
-		msgLong.text = msgLong.text .. " [at " .. rTarget.sName .. "]";
+		msgShort.text = msgShort.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
+		msgLong.text = msgLong.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
 	end
 	if sResults ~= "" then
 		msgLong.text = msgLong.text .. " " .. sResults;
@@ -693,7 +691,7 @@ function applyAttack(rSource, rTarget, bSecret, sAttackType, sDesc, nTotal, sRes
 		msgLong.icon = "roll_attack";
 	end
 		
-	ActionsManager.messageResult(bSecret, rSource, rTarget, msgLong, msgShort);
+	ActionsManager.outputResult(bSecret, rSource, rTarget, msgLong, msgShort);
 end
 
 aCritState = {};

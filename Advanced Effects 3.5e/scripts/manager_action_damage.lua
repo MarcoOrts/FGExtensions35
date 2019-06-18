@@ -711,11 +711,7 @@ function onStabilization(rSource, rTarget, rRoll)
 	Comm.deliverChatMessage(rMessage);
 
 	if bSuccess then
-		local aEffect = { sName = "Stable", nDuration = 0 };
-		if ActorManager.getFaction(rSource) ~= "friend" then
-			aEffect.nGMOnly = 1;
-		end
-		EffectManager.addEffect("", "", ActorManager.getCTNode(rSource), aEffect, true);
+		ActorManager2.applyStableEffect(rSource);
 	else
 		applyFailedStabilization(rSource);
 	end
@@ -993,19 +989,19 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput, bImmune, bFor
 	local aHResist = EffectManager35E.getEffectsBonusByType(rTarget, "HRESIST", false, {}, rSource);
 	-- local aFortif = EffectManager35E.getEffectsBonusByType(rTarget, "FORTIF", false, {}, rSource);
 	local aDR = EffectManager35E.getEffectsByType(rTarget, "DR", {}, rSource);
-	
-	-- local bApplyIncorporeal = false;
-	-- local bSourceIncorporeal = false;
-	-- if string.match(rDamageOutput.sOriginal, "%[INCORPOREAL%]") then
-		-- bSourceIncorporeal = true;
-	-- end
-	-- local bTargetIncorporeal = EffectManager35E.hasEffect(rTarget, "Incorporeal");
-	-- if bTargetIncorporeal and not bSourceIncorporeal then
-		-- bApplyIncorporeal = true;
+	-- KEL critical immunity (PFMode) for incorporealalready checked earlier	
+	local bApplyIncorporeal = false;
+	local bSourceIncorporeal = false;
+	if string.match(rDamageOutput.sOriginal, "%[INCORPOREAL%]") then
+		bSourceIncorporeal = true;
+	end
+	local bTargetIncorporeal = EffectManager35E.hasEffect(rTarget, "Incorporeal");
+	if bTargetIncorporeal and not bSourceIncorporeal then
+		bApplyIncorporeal = true;
 		-- if bPFMode then
 			-- bImmune["critical"] = true;
 		-- end
-	-- end
+	end
 	
 	-- IF IMMUNE ALL, THEN JUST HANDLE IT NOW
 	-- KEL Also for FORTIF
@@ -1756,6 +1752,7 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImm
 
 	-- Decode damage/heal description
 	local rDamageOutput = decodeDamageText(nTotal, sDamage);
+	local aRegenEffectsToDisable = {};
 
 	-- Healing
 	if rDamageOutput.sType == "heal" or rDamageOutput.sType == "fheal" then
@@ -1763,9 +1760,9 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImm
 		if nWounds <= 0 and nNonlethal <= 0 then
 			table.insert(aNotifications, "[NOT WOUNDED]");
 		else
-			-- CALCULATE HEAL AMOUNTS
 			local nHealAmount = rDamageOutput.nVal;
 			
+			-- CALCULATE HEAL AMOUNTS
 			local nNonlethalHealAmount = math.min(nHealAmount, nNonlethal);
 			nNonlethal = nNonlethal - nNonlethalHealAmount;
 			if (not bPFMode) and (rDamageOutput.sType == "fheal") then
@@ -1776,11 +1773,6 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImm
 			
 			local nWoundHealAmount = math.min(nHealAmount, nWounds);
 			nWounds = nWounds - nWoundHealAmount;
-			
-			-- IF WE HEALED FROM NEGATIVE TO ZERO OR HIGHER, THEN REMOVE STABLE EFFECT
-			if (nOriginalWounds > nTotalHP) and (nWounds <= nTotalHP) then
-				EffectManager.removeEffect(ActorManager.getCTNode(rTarget), "Stable");
-			end
 			
 			-- SET THE ACTUAL HEAL AMOUNT FOR DISPLAY
 			rDamageOutput.nVal = nNonlethalHealAmount + nWoundHealAmount;
@@ -2015,6 +2007,7 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImm
 	end
 
 	-- Check for status change
+	local _,_,sNewStatus = ActorManager2.getPercentWounded(sTargetType, nodeTarget);
 	local bShowStatus = false;
 	if ActorManager.getFaction(rTarget) == "friend" then
 		bShowStatus = not OptionsManager.isOption("SHPC", "off");
@@ -2022,9 +2015,31 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImm
 		bShowStatus = not OptionsManager.isOption("SHNPC", "off");
 	end
 	if bShowStatus then
-		local _,_,sNewStatus = ActorManager2.getPercentWounded(sTargetType, nodeTarget);
 		if sOriginalStatus ~= sNewStatus then
 			table.insert(aNotifications, "[" .. Interface.getString("combat_tag_status") .. ": " .. sNewStatus .. "]");
+		end
+	end
+	
+	-- Manage Regeneration effect state when hit with disabling damage
+	if #aRegenEffectsToDisable > 0 then
+		local nodeTargetCT = ActorManager.getCTNode(rTarget);
+		for _,v in ipairs(aRegenEffectsToDisable) do
+			if sNewStatus == "Dead" then
+				EffectManager.deactivateEffect(nodeTargetCT, v);
+			else
+				EffectManager.disableEffect(nodeTargetCT, v);
+			end
+		end
+	end
+	
+	-- Manage Stable effect add/remove when healed
+	if (sOriginalStatus == "Dying") or (sOriginalStatus == "Dead") then
+		if (sNewStatus ~= "Dying") and (sNewStatus ~= "Dead") then
+			ActorManager2.removeStableEffect(rTarget);
+		else
+			if ((rDamageOutput.sType == "heal") or (rDamageOutput.sType == "fheal") or (rDamageOutput.sType == "regen")) and (rDamageOutput.nVal > 0) then
+				ActorManager2.applyStableEffect(rTarget);
+			end
 		end
 	end
 	
