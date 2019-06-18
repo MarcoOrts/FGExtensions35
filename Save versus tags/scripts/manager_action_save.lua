@@ -129,8 +129,9 @@ function getVsRoll(rActor, sSave, rSource, sSaveDesc, tags)
 	local necromancy = (sSaveDesc:match("%[NECROMANCY%]") ~= nil);
 	local transmutation = (sSaveDesc:match("%[TRANSMUTATION%]") ~= nil);
 	local universal = (sSaveDesc:match("%[UNIVERSAL%]") ~= nil);
+	-- Adding auxiliary effect
 	local rEffectSpell = {};
-	rEffectSpell.sName = "tagsistagsKelrugem;";
+	rEffectSpell.sName = "tagsistagsKelrugemSave;";
 	rEffectSpell.nDuration = 1;
 	rEffectSpell.nInit = 0;
 	rEffectSpell.nGMOnly = 1;
@@ -181,9 +182,13 @@ function getVsRoll(rActor, sSave, rSource, sSaveDesc, tags)
 		rRoll.sDesc = rRoll.sDesc .. " [UNIVERSAL]";
         rEffectSpell.sName = rEffectSpell.sName.. "universal;";
 	end
-	rRoll.sDesc = rRoll.sDesc .. " [Other tags: " .. tags .. "]";
+	if tags ~= "" then
+		rRoll.sDesc = rRoll.sDesc .. " [Other tags: " .. tags .. "]";
+	end
 	rEffectSpell.sName = rEffectSpell.sName.. tags;
 	EffectManager.addEffect("", "", ActorManager.getCTNode(rActor), rEffectSpell, false);
+	
+	-- END auxiliary effect
 	
 	if sAbility and sAbility ~= "" then
 		if (sSave == "fortitude" and sAbility ~= "constitution") or
@@ -195,6 +200,7 @@ function getVsRoll(rActor, sSave, rSource, sSaveDesc, tags)
 			end
 		end
 	end
+	-- Add tags
 	rRoll.tags = tags;
 	
 	return rRoll;
@@ -307,7 +313,7 @@ function modSave(rSource, rTarget, rRoll)
 		local sEffectSpell = {};
 	
 		sEffectSpell.nDuration = 1;
-		sEffectSpell.sName = "tagsistagsKelrugem;";
+		sEffectSpell.sName = "tagsistagsKelrugemSave;";
 		sEffectSpell.nInit = 0;
 		sEffectSpell.nGMOnly = 1;
 		sEffectSpell.sApply = "";
@@ -423,7 +429,7 @@ function onSave(rSource, rTarget, rRoll)
 				rRoll.sSaveResult = "autofailure";
 			end
 		end
-		if (rRoll.sResult or "") == "" then
+		if (rRoll.sSaveResult or "") == "" then
 			local nTarget = tonumber(rRoll.nTarget) or 0;
 			if rRoll.nTotal >= nTarget then
 				rRoll.sSaveResult = "success";

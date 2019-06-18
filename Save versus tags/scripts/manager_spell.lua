@@ -151,6 +151,8 @@ function addSpellCastAction(nodeSpell)
 
 	DB.setValue(nodeAction, "type", "string", "cast");
 	
+	-- Automatic parsing for spell tags
+	
 	local sSchool = DB.getValue(nodeSpell, "school", ""):lower();
 	
 	if sSchool:match("^abjuration") then
@@ -173,9 +175,34 @@ function addSpellCastAction(nodeSpell)
 		DB.setValue(nodeAction, "school", "string", "universal");
 	end
 	
+	-- Defining tagnames in the last line
+	local tagnames = StringManager.parseWords(sSchool);
+	local tags = "";
+	local i = 1;
+	local semicolon = "; ";
+	
+	while tagnames[i] do
+		if not StringManager.isWord(tagnames[i], "abjuration") and not StringManager.isWord(tagnames[i], "conjuration") and not StringManager.isWord(tagnames[i], "divination") and not StringManager.isWord(tagnames[i], "enchantment") and not StringManager.isWord(tagnames[i], "evocation") and not StringManager.isWord(tagnames[i], "illusion") and not StringManager.isWord(tagnames[i], "necromancy") and not StringManager.isWord(tagnames[i], "transmutation") and not StringManager.isWord(tagnames[i], "universal") and not StringManager.isWord(tagnames[i], "language-dependent") and not StringManager.isWord(tagnames[i], "mind-affecting") then
+			tags = tags .. tagnames[i] .. semicolon;
+		end
+		
+		if StringManager.isWord(tagnames[i], "language-dependent") then
+			tags = tags .. "languagedependent" .. semicolon;
+		end
+		
+		if StringManager.isWord(tagnames[i], "mind-affecting") then
+			tags = tags .. "mindaffecting" .. semicolon;
+		end
+		
+		i = i + 1;
+	end
+	
 	DB.setValue(nodeAction, "stype", "string", "spell");
 	
+	-- End of definition for tags
+	
 	local sSave = DB.getValue(nodeSpell, "save", ""):lower();
+	
 	if not sSave:match("harmless") then
 		if sSave:match("^fortitude ") then
 			DB.setValue(nodeAction, "savetype", "string", "fortitude");
@@ -193,6 +220,19 @@ function addSpellCastAction(nodeSpell)
 	if sSR:match("harmless") or sSR:match("^no") then
 		DB.setValue(nodeAction, "srnotallowed", "number", 1);
 	end
+	
+	-- Add harmless and object as tag
+	if sSave:match("harmless") or sSR:match("harmless") then
+		tags = tags .. "harmless" .. semicolon;
+	end
+	if sSave:match("object") or sSR:match("object") then
+		tags = tags .. "object" .. semicolon;
+	end
+	-- END
+	
+	-- Adding tags
+	DB.setValue(nodeAction, "othertags", "string", tags);
+	-- END
 	
 	local sDesc = DB.getValue(nodeSpell, "description", ""):lower();
 	if sDesc:match("ranged touch attack") then
@@ -693,13 +733,15 @@ function getSpellAction(rActor, nodeAction, sSubRoll)
 	rAction.type = sType;
 	rAction.label = DB.getValue(nodeAction, "...name", "");
 	rAction.order = getSpellActionOutputOrder(nodeAction);
+	-- Save versus tags new variables
+	rAction.school = DB.getValue(nodeAction, "school", "");
+	rAction.stype = DB.getValue(nodeAction, "stype", "");
+	rAction.tags = DB.getValue(nodeAction, "othertags", "");
+	-- END of new variables
 	
 	if sType == "cast" then
 		rAction.subtype = sSubRoll;
 		rAction.onmissdamage = DB.getValue(nodeAction, "onmissdamage", "");
-		rAction.school = DB.getValue(nodeAction, "school", "");
-		rAction.stype = DB.getValue(nodeAction, "stype", "");
-		rAction.tags = DB.getValue(nodeAction, "othertags", "");
 		
 		local sAttackType = DB.getValue(nodeAction, "atktype", "");
 		if sAttackType ~= "" then

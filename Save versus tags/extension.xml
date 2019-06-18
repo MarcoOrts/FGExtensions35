@@ -23,6 +23,7 @@
 	<includefile source="campaign/record_spell_roll.xml" />
 	
     <!-- High-level scripts -->
+	<script name="TargetingManager" file="scripts/manager_targeting.lua" />
 	<script name="SpellManager" file="scripts/manager_spell.lua" />
 	<script name="ActionSave" file="scripts/manager_action_save.lua" />
 	<script name="ActionSpell" file="scripts/manager_action_spell.lua" />
