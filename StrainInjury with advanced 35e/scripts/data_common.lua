@@ -220,37 +220,44 @@ bonuscomps = {
 	"WILL"
 };
 
--- Condition effect types for token widgets
 condcomps = {
 	["blinded"] = "cond_blinded",
 	["confused"] = "cond_confused",
-	["cowering"] = "cond_cowering",
+	["cowering"] = "cond_frightened",
 	["dazed"] = "cond_dazed",
-	["dazzled"] = "cond_dazzled",
+	["dazzled"] = "cond_dazed",
 	["deafened"] = "cond_deafened",
-	["entangled"] = "cond_entangled",
-	["exhausted"] = "cond_exhausted",
-	["fascinated"] = "cond_fascinated",
-	["fatigued"] = "cond_fatigued",
-	["flatfooted"] = "cond_flatfooted",
+	["entangled"] = "cond_restrained",
+	["exhausted"] = "cond_weakened",
+	["fascinated"] = "cond_charmed",
+	["fatigued"] = "cond_weakened",
+	["flat-footed"] = "cond_surprised",
+	["flatfooted"] = "cond_surprised",
 	["frightened"] = "cond_frightened",
 	["grappled"] = "cond_grappled",
 	["helpless"] = "cond_helpless",
 	["incorporeal"] = "cond_incorporeal",
 	["invisible"] = "cond_invisible",
-	["nauseated"] = "cond_nauseated",
-	["panicked"] = "cond_panicked",
+	["nauseated"] = "cond_sickened",
+	["panicked"] = "cond_frightened",
 	["paralyzed"] = "cond_paralyzed",
-	["petrified"] = "cond_petrified",
+	["petrified"] = "cond_paralyzed",
 	["pinned"] = "cond_pinned",
 	["prone"] = "cond_prone",
-	["rebuked"] = "cond_rebuked",
-	["shaken"] = "cond_shaken",
+	["rebuked"] = "cond_turned",
+	["shaken"] = "cond_frightened",
 	["sickened"] = "cond_sickened",
 	["slowed"] = "cond_slowed",
 	["stunned"] = "cond_stunned",
 	["turned"] = "cond_turned",
-	["unconscious"] = "cond_unconscious"
+	["unconscious"] = "cond_unconscious",
+	-- Similar to conditions
+	["ca"] = "cond_advantage",
+	["grantca"] = "cond_disadvantage",
+	["conc"] = "cond_conceal",
+	["tconc"] = "cond_conceal",
+	["cover"] = "cond_cover",
+	["scover"] = "cond_cover",
 };
 
 -- Other visible effect types for token widgets
@@ -259,13 +266,13 @@ othercomps = {
 	["TCONC"] = "cond_conceal",
 	["COVER"] = "cond_cover",
 	["SCOVER"] = "cond_cover",
-	["NLVL"] = "cond_nlvl",
+	["NLVL"] = "cond_penalty",
 	["IMMUNE"] = "cond_immune",
-	["RESIST"] = "cond_resist",
-	["VULN"] = "cond_vuln",
-	["REGEN"] = "cond_regen",
-	["FHEAL"] = "cond_fheal",
-	["DMGO"] = "cond_ongoing"
+	["RESIST"] = "cond_resistance",
+	["VULN"] = "cond_vulnerable",
+	["REGEN"] = "cond_regeneration",
+	["FHEAL"] = "cond_regeneration",
+	["DMGO"] = "cond_bleed",
 };
 
 -- Effect components which can be targeted
@@ -400,7 +407,7 @@ bonustypes = {
 
 stackablebonustypes = {
 	"circumstance",
-	"dodge"
+	"dodge",
 };
 
 -- Armor class bonus types

@@ -28,6 +28,8 @@ actions = {
 	["critconfirm"] = { sIcon = "action_attack" },
 	["misschance"] = { },
 	["stabilization"] = { },
+	--KEL fortification
+	["fortification"] = { },
 };
 
 targetactions = {

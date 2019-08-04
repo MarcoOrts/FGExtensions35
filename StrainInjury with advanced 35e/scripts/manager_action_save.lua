@@ -254,7 +254,7 @@ function onSave(rSource, rTarget, rRoll)
 				rRoll.sSaveResult = "autofailure";
 			end
 		end
-		if (rRoll.sResult or "") == "" then
+		if (rRoll.sSaveResult or "") == "" then
 			local nTarget = tonumber(rRoll.nTarget) or 0;
 			if rRoll.nTotal >= nTarget then
 				rRoll.sSaveResult = "success";

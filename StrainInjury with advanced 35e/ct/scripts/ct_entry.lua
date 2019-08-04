@@ -276,6 +276,12 @@ function setDefensiveVisible()
 	ac_touch_label.setVisible(v);
 	ac_flatfooted.setVisible(v);
 	ac_ff_label.setVisible(v);
+	--KEL adding AoO stuff
+	aoo.setVisible(v);
+	label_aoo.setVisible(v);
+	aoomax.setVisible(v);
+	label_aoomax.setVisible(v);
+	-- END
 	
 	cmd.setVisible(v and bPFMode);
 	cmd_label.setVisible(v and bPFMode);
