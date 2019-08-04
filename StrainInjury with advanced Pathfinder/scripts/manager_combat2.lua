@@ -10,7 +10,6 @@ function onInit()
 	CombatManager.setCustomNPCSpaceReach(getNPCSpaceReach);
 
 	CombatManager.setCustomRoundStart(onRoundStart);
-	CombatManager.setCustomTurnStart(onTurnStart);
 	CombatManager.setCustomTurnEnd(onTurnEnd);
 	CombatManager.setCustomCombatReset(resetInit);
 end
@@ -25,31 +24,25 @@ function onRoundStart(nCurrent)
 	end
 end
 
-function onTurnStart(nodeEntry)
-	if not nodeEntry then
-		return;
-	end
-	
-end
-
 function onTurnEnd(nodeEntry)
 	if not nodeEntry then
 		return;
 	end
-	-- Handle end of turn changes
+	
+	-- Handle beginning of turn changes
 	DB.setValue(nodeEntry, "immediate", "number", 0);
+	-- KEL
+	DB.setValue(nodeEntry, "aoo", "number", 0);
+	-- End
 	
 	-- Check for stabilization (based on option)
 	local sOptionHRST = OptionsManager.getOption("HRST");
 	if sOptionHRST ~= "off" then
 		if (sOptionHRST == "all") or (DB.getValue(nodeEntry, "friendfoe", "") == "friend") then
-			local nHP = DB.getValue(nodeEntry, "hp", 0);
-			local nWounds = DB.getValue(nodeEntry, "wounds", 0);
-            local nInjury = DB.getValue(nodeEntry, "injury", 0);
-			local rActor = ActorManager.getActorFromCT(nodeEntry);
-			local nDying = GameSystem.getDeathThreshold(rActor);
-			if nHP > 0 and nWounds + nInjury > nHP and nWounds + nInjury < nHP + nDying then
-				if not EffectManager35E.hasEffect(rActor, "Stable") then
+			local _,_,sStatus = ActorManager2.getPercentWounded("ct", nodeEntry);
+			if sStatus == "Dying" then
+				local rActor = ActorManager.getActorFromCT(nodeEntry);
+				if not EffectManager35E.hasEffectCondition(rActor, "Stable") then
 					ActionDamage.performStabilizationRoll(rActor);
 				end
 			end
@@ -154,6 +147,21 @@ function addNPC(sClass, nodeNPC, sName)
 			nodeAttacks.createChild();
 		end
 	end
+
+	-- KEL Add Combat reflexes
+	local sFeats = string.lower(DB.getValue(nodeNPC, "feats", ""));
+	-- local aFeats = StringManager.split(sFeats, ",", true);
+	local aFeats = string.match(sFeats, "combat reflexes");
+	-- if StringManager.contains(aFeats, "combat reflexes") or StringManager.contains(aFeats, "combat reflexes (b)") then
+	if aFeats == "combat reflexes" then
+		local aoo = 1;
+		local dex = DB.getValue(nodeNPC, "dexterity", 10);
+		if (dex > 11) then
+			aoo = aoo + math.floor((dex - 10) / 2 );
+		end
+		DB.setValue(nodeEntry, "aoomax", "number", aoo);
+	end
+	-- End
 
 	-- Track additional damage types and intrinsic effects
 	local aEffects = {};
@@ -419,12 +427,18 @@ function addNPC(sClass, nodeNPC, sName)
 				-- Add exception for "magic immunity", which is also a damage type
 				elseif StringManager.isWord(aSQWords[i+1], "magic") then
 					table.insert(aEffects, "IMMUNE: spell");
+				elseif StringManager.isWord(aSQWords[i+1], "critical") and StringManager.isWord(aSQWords[i+2], "hits") then
+					table.insert(aEffects, "IMMUNE: critical");
+					i = i + 1;
+				elseif StringManager.isWord(aSQWords[i+1], "precision") and StringManager.isWord(aSQWords[i+2], "damage") then
+					table.insert(aEffects, "IMMUNE: precision");
+					i = i + 1;
 				elseif StringManager.isWord(aSQWords[i+1], DataCommon.immunetypes) then
 					table.insert(aEffects, "IMMUNE: " .. aSQWords[i+1]);
 					if StringManager.isWord(aSQWords[i+2], "effects") then
 						i = i + 1;
 					end
-				elseif StringManager.isWord(aSQWords[i+1], DataCommon.dmgtypes) then
+				elseif StringManager.isWord(aSQWords[i+1], DataCommon.dmgtypes) and not StringManager.isWord(aSQWords[i+1], DataCommon.specialdmgtypes) then
 					table.insert(aEffects, "IMMUNE: " .. aSQWords[i+1]);
 				else
 					break;
@@ -519,6 +533,9 @@ function resetInit()
 	function resetCombatantInit(nodeCT)
 		DB.setValue(nodeCT, "initresult", "number", 0);
 		DB.setValue(nodeCT, "immediate", "number", 0);
+		-- KEL
+		DB.setValue(nodeEntry, "aoo", "number", 0);
+		--End
 	end
 	CombatManager.callForEachCombatant(resetCombatantInit);
 end

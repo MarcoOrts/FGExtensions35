@@ -20,20 +20,63 @@ function onInit()
 	ActionsManager.registerResultHandler("damage", onDamage);
 	ActionsManager.registerResultHandler("spdamage", onDamage);
 	ActionsManager.registerResultHandler("stabilization", onStabilization);
+	
+	--KEL Fortif roll
+	ActionsManager.registerResultHandler("fortification", onFortification);
 end
 
 function handleApplyDamage(msgOOB)
 	local rSource = ActorManager.getActor(msgOOB.sSourceType, msgOOB.sSourceNode);
 	local rTarget = ActorManager.getActor(msgOOB.sTargetType, msgOOB.sTargetNode);
+	local bImmune = {};
+	local bFortif = {};
 	if rTarget then
 		rTarget.nOrder = msgOOB.nTargetOrder;
 	end
-	
+	-- Debug.console(msgOOB);
 	local nTotal = tonumber(msgOOB.nTotal) or 0;
-	applyDamage(rSource, rTarget, (tonumber(msgOOB.nSecret) == 1), msgOOB.sRollType, msgOOB.sDamage, nTotal);
+	-- KEL bImmune, bFortif
+	if string.match(msgOOB.sDamage, "%[DAMAGE") and not Input.isControlPressed() then
+		local rDamageOutput = decodeDamageText(nTotal, msgOOB.sDamage);	
+		if rTarget then
+			for k, v in pairs(rDamageOutput.aDamageTypes) do
+				local l = "KELFORTIF " .. k;
+				local aSrcDmgClauseTypes = {};
+				local aTemp = StringManager.split(k, ",", true);
+				for i = 1, #aTemp do
+					if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+						table.insert(aSrcDmgClauseTypes, aTemp[i]);
+					end
+				end
+				if #aSrcDmgClauseTypes > 0 then
+					if msgOOB.ImmuneAll == "true" then
+						bImmune["all"] = true;
+					else
+						bImmune["all"] = false;
+					end
+					-- if msgOOB.FortifAll == "true" then
+						-- bFortif["all"] = true;
+					-- else
+						-- bFortif["all"] = false;
+					-- end
+					if msgOOB[k] == "true" then
+						bImmune[k] = true;
+					else
+						bImmune[k] = false;
+					end
+					if msgOOB[l] == "true" then
+						bFortif[k] = true;
+					else
+						bFortif[k] = false;
+					end
+				end
+			end
+		end
+	end
+	applyDamage(rSource, rTarget, (tonumber(msgOOB.nSecret) == 1), msgOOB.sRollType, msgOOB.sDamage, nTotal, bImmune, bFortif);
 end
-
-function notifyApplyDamage(rSource, rTarget, bSecret, sRollType, sDesc, nTotal)
+-- KEL bImmune bFortif
+function notifyApplyDamage(rSource, rTarget, bSecret, sRollType, sDesc, nTotal, bImmune, bFortif)
 	if not rTarget then
 		return;
 	end
@@ -56,6 +99,29 @@ function notifyApplyDamage(rSource, rTarget, bSecret, sRollType, sDesc, nTotal)
 	msgOOB.sTargetType = sTargetType;
 	msgOOB.sTargetNode = sTargetNode;
 	msgOOB.nTargetOrder = rTarget.nOrder;
+	-- KEL bImmune, bFortif
+	if string.match(sDesc, "%[DAMAGE") and not Input.isControlPressed() then
+		local rDamageOutput = decodeDamageText(nTotal, sDesc);	
+		if rTarget then
+			for k, v in pairs(rDamageOutput.aDamageTypes) do
+				local l = "KELFORTIF " .. k;
+				local aSrcDmgClauseTypes = {};
+				local aTemp = StringManager.split(k, ",", true);
+				for i = 1, #aTemp do
+					if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+						table.insert(aSrcDmgClauseTypes, aTemp[i]);
+					end
+				end
+				if #aSrcDmgClauseTypes > 0 then
+					msgOOB.ImmuneAll = bImmune["all"];
+					-- msgOOB.FortifAll = bFortif["all"];
+					msgOOB[k] = bImmune[k];
+					msgOOB[l] = bFortif[k];
+				end
+			end
+		end
+	end
+	-- Debug.console(msgOOB);
 
 	local sSourceType, sSourceNode = ActorManager.getTypeAndNodeName(rSource);
 	msgOOB.sSourceType = sSourceType;
@@ -244,12 +310,12 @@ function modDamage(rSource, rTarget, rRoll)
 		rRoll.clauses = aNewClauses;
 	end
 	
-    -- Handle Injury
+	-- Handle Injury
     local bInjury = ModifierStack.getModifierKey("DMG_INJURY");
     if bInjury then
         table.insert(aAddDesc, "[INJURY]");
     end
-
+	
 	-- Handle general damage effects
 	if rSource then
 		-- NOTE: Effect damage dice are not multiplied on critical, though numerical modifiers are multiplied
@@ -343,10 +409,18 @@ function modDamage(rSource, rTarget, rRoll)
 		end
 		
 		-- Apply damage type modifiers
-		if rRoll.sType == "spdamage" then
-			aEffects = EffectManager35E.getEffectsByType(rSource, "DMGSTYPE", {});
+		if rTarget then
+			if rRoll.sType == "spdamage" then
+				aEffects = EffectManager35E.getEffectsByType(rSource, "DMGSTYPE", {}, rTarget);
+			else
+				aEffects = EffectManager35E.getEffectsByType(rSource, "DMGTYPE", {}, rTarget);
+			end
 		else
-			aEffects = EffectManager35E.getEffectsByType(rSource, "DMGTYPE", {});
+			if rRoll.sType == "spdamage" then
+				aEffects = EffectManager35E.getEffectsByType(rSource, "DMGSTYPE", {});
+			else
+				aEffects = EffectManager35E.getEffectsByType(rSource, "DMGTYPE", {});
+			end
 		end
 		local aAddTypes = {};
 		for _,v in ipairs(aEffects) do
@@ -482,6 +556,8 @@ function onDamage(rSource, rTarget, rRoll)
 	local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
 	rMessage.text = string.gsub(rMessage.text, " %[MOD:[^]]*%]", "");
 	rMessage.text = string.gsub(rMessage.text, " %[MULT:[^]]*%]", "");
+	-- Debug.console(rMessage);
+	-- Debug.console(string.match(rMessage.text, "%[DAMAGE"));
 
 	local nTotal = ActionsManager.total(rRoll);
 	
@@ -493,10 +569,150 @@ function onDamage(rSource, rTarget, rRoll)
 	if bShowMsg then
 		Comm.deliverChatMessage(rMessage);
 	end
-
+	
 	-- Apply damage to the PC or CT entry referenced
-	notifyApplyDamage(rSource, rTarget, rRoll.bTower, rRoll.sType, rMessage.text, nTotal);
-end
+	-- KEL Apply first Fortification roll if avalaible
+	local bDice = {};
+	local isFortif = false;
+	-- local bImmune = {};
+	local bSImmune = {};
+	-- local bFortif = {};
+	local bSFortif = {};
+	local MaxFortifMod = {};
+	local bPFMode = DataCommon.isPFRPG();
+
+	if string.match(rMessage.text, "%[DAMAGE") and not Input.isControlPressed() then
+		local rDamageOutput = decodeDamageText(nTotal, rMessage.text);
+		if rTarget then
+			local aImmune = EffectManager35E.getEffectsBonusByType(rTarget, "IMMUNE", false, {}, rSource);
+			local aFortif = EffectManager35E.getEffectsBonusByType(rTarget, "FORTIF", false, {}, rSource);
+			local bApplyIncorporeal = false;
+			local bSourceIncorporeal = false;
+			if string.match(rDamageOutput.sOriginal, "%[INCORPOREAL%]") then
+				bSourceIncorporeal = true;
+			end
+			local bTargetIncorporeal = EffectManager35E.hasEffect(rTarget, "Incorporeal");
+			if bTargetIncorporeal and not bSourceIncorporeal then
+				bApplyIncorporeal = true;
+				if bPFMode then
+					aImmune["critical"] = true;
+				end
+			end
+			for k, v in pairs(rDamageOutput.aDamageTypes) do
+				MaxFortifMod[k] = 0;
+			end
+			for k, v in pairs(rDamageOutput.aDamageTypes) do
+				-- GET THE INDIVIDUAL DAMAGE TYPES FOR THIS ENTRY (EXCLUDING UNTYPED DAMAGE TYPE)
+				local aSrcDmgClauseTypes = {};
+				local aTemp = StringManager.split(k, ",", true);
+				for i = 1, #aTemp do
+					if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+						table.insert(aSrcDmgClauseTypes, aTemp[i]);
+					end
+				end
+				if #aSrcDmgClauseTypes > 0 then
+					local nBasicDmgTypeMatchesFortif = 0;
+					local nBasicDmgTypeMatches = 0;
+					local nSpecialDmgTypes = 0;
+					local nSpecialDmgTypeMatches = 0;
+					local nSpecialDmgTypeMatchesFortif = 0;
+					-- bImmune["all"] = false;
+					bSImmune["all"] = "false";
+					-- bFortif["all"] = false;
+					bSFortif["all"] = "false";
+					if aImmune["all"] then
+						-- bImmune["all"] = true;
+						bSImmune["all"] = "true";
+					end
+					if aFortif["all"] then
+						-- bFortif["all"] = true;
+						bSFortif["all"] = "true";
+					end
+					-- bImmune[k] = false;
+					bSImmune[k] = "false";
+					-- bFortif[k] = false;
+					bSFortif[k] = "false";
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if StringManager.contains(DataCommon.basicdmgtypes, sDmgType) then
+							if aImmune[sDmgType] then nBasicDmgTypeMatches = nBasicDmgTypeMatches + 1; end
+							if aFortif[sDmgType] then nBasicDmgTypeMatchesFortif = nBasicDmgTypeMatchesFortif + 1; end
+						else
+							nSpecialDmgTypes = nSpecialDmgTypes + 1;
+							if aImmune[sDmgType] then nSpecialDmgTypeMatches = nSpecialDmgTypeMatches + 1; end
+							if aFortif[sDmgType] then nSpecialDmgTypeMatchesFortif = nSpecialDmgTypeMatchesFortif + 1; end
+						end
+					end
+					if (nSpecialDmgTypeMatches > 0) then
+						-- bImmune[k] = true;
+						bSImmune[k] = "true";
+					elseif (nBasicDmgTypeMatches > 0) and (nBasicDmgTypeMatches + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+						-- bImmune[k] = true;
+						bSImmune[k] = "true";
+					end
+					if (nSpecialDmgTypeMatchesFortif > 0) then
+						-- bFortif[k] = true;
+						bSFortif[k] = "true";
+						for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+							if not StringManager.contains(DataCommon.basicdmgtypes, sDmgType) and aFortif[sDmgType] then
+								MaxFortifMod[k] = math.max(MaxFortifMod[k], aFortif[sDmgType].mod);
+							end
+						end
+					end
+					if (nBasicDmgTypeMatchesFortif > 0) and (nBasicDmgTypeMatchesFortif + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+						-- bFortif[k] = true;
+						bSFortif[k] = "true";
+						for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+							if StringManager.contains(DataCommon.basicdmgtypes, sDmgType) and aFortif[sDmgType] then
+								MaxFortifMod[k] = math.max(MaxFortifMod[k], aFortif[sDmgType].mod);
+							end
+						end
+					end
+					-- local FortifApplied = false;
+					if bSFortif[k] == "true" and not aFortif["all"] and bSImmune[k] == "false" and not aImmune["all"] then
+						table.insert(bDice, "d100");
+						table.insert(bDice, "d10");
+						isFortif = true;
+						-- FortifApplied = true;
+					end
+					if aFortif["all"] and not aImmune["all"] and bSImmune[k] == "false" then
+						table.insert(bDice, "d100");
+						table.insert(bDice, "d10");
+						isFortif = true;
+						MaxFortifMod[k] = math.max(MaxFortifMod[k], aFortif["all"].mod);
+					end
+				end
+			end
+		end
+	end
+	-- KEL add information about IMMUNE and FORTIF to the standard way! (otherwise these effects can not be skipped anymore etc)
+	if not isFortif then
+		notifyApplyDamage(rSource, rTarget, rRoll.bTower, rRoll.sType, rMessage.text, nTotal, bSImmune, bSFortif);
+	else
+		local aRollFortif = { sType = "fortification", aDice = bDice, nMod = 0, bTower = rRoll.bTower, aType = rRoll.sType, aMessagetext = rMessage.text, aTotal = nTotal};
+		local rDamageOutput = decodeDamageText(nTotal, rMessage.text);
+		if rTarget then
+			for k, v in pairs(rDamageOutput.aDamageTypes) do
+				local l = "KELFORTIF " .. k;
+				local m = "KELFORTIFMOD " .. k;
+				local aSrcDmgClauseTypes = {};
+				local aTemp = StringManager.split(k, ",", true);
+				for i = 1, #aTemp do
+					if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+						table.insert(aSrcDmgClauseTypes, aTemp[i]);
+					end
+				end
+				if #aSrcDmgClauseTypes > 0 then
+					aRollFortif.ImmuneAll = bSImmune["all"];
+					aRollFortif.FortifAll = bSFortif["all"];
+					aRollFortif[k] = bSImmune[k];
+					aRollFortif[l] = bSFortif[k];
+					aRollFortif[m] = MaxFortifMod[k];
+				end
+			end
+		end
+		ActionsManager.roll(rSource, rTarget, aRollFortif);
+	end
+end 
 
 function onStabilization(rSource, rTarget, rRoll)
 	local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
@@ -511,11 +727,7 @@ function onStabilization(rSource, rTarget, rRoll)
 	Comm.deliverChatMessage(rMessage);
 
 	if bSuccess then
-		local aEffect = { sName = "Stable", nDuration = 0 };
-		if ActorManager.getFaction(rSource) ~= "friend" then
-			aEffect.nGMOnly = 1;
-		end
-		EffectManager.addEffect("", "", ActorManager.getCTNode(rSource), aEffect, true);
+		ActorManager2.applyStableEffect(rSource);
 	else
 		applyFailedStabilization(rSource);
 	end
@@ -775,8 +987,8 @@ function matchAndOrClauses(aClausesOR, aMatchWords)
 		
 	return false;
 end
-
-function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
+-- KEL bImmune, bFortif
+function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput, bImmune, bFortif)
 	-- SETUP
 	local nDamageAdjust = 0;
 	local nNonlethal = 0;
@@ -784,15 +996,19 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	local bResist = false;
 	local aWords;
 	local bPFMode = DataCommon.isPFRPG();
-	
+	-- KEL
+	local aInjury = false;
+	-- END
+	-- KEL Removing IMMUNE here since called earlier
 	-- GET THE DAMAGE ADJUSTMENT EFFECTS
-	local aImmune = EffectManager35E.getEffectsBonusByType(rTarget, "IMMUNE", false, {}, rSource);
+	-- local aImmune = EffectManager35E.getEffectsBonusByType(rTarget, "IMMUNE", false, {}, rSource);
 	local aVuln = EffectManager35E.getEffectsBonusByType(rTarget, "VULN", false, {}, rSource);
 	local aResist = EffectManager35E.getEffectsBonusByType(rTarget, "RESIST", false, {}, rSource);
+	-- KEL Adding HRESIST
 	local aHResist = EffectManager35E.getEffectsBonusByType(rTarget, "HRESIST", false, {}, rSource);
-	local aFortif = EffectManager35E.getEffectsBonusByType(rTarget, "FORTIF", false, {}, rSource);
+	-- local aFortif = EffectManager35E.getEffectsBonusByType(rTarget, "FORTIF", false, {}, rSource);
 	local aDR = EffectManager35E.getEffectsByType(rTarget, "DR", {}, rSource);
-	
+	-- KEL critical immunity (PFMode) for incorporeal already checked earlier
 	local bApplyIncorporeal = false;
 	local bSourceIncorporeal = false;
 	if string.match(rDamageOutput.sOriginal, "%[INCORPOREAL%]") then
@@ -801,13 +1017,13 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 	local bTargetIncorporeal = EffectManager35E.hasEffect(rTarget, "Incorporeal");
 	if bTargetIncorporeal and not bSourceIncorporeal then
 		bApplyIncorporeal = true;
-		if bPFMode then
-			aImmune["critical"] = true;
-		end
+		-- if bPFMode then
+			-- bImmune["critical"] = true;
+		-- end
 	end
 	
 	-- IF IMMUNE ALL, THEN JUST HANDLE IT NOW
-	if aImmune["all"] then
+	if bImmune["all"] then
 		return (0 - nDamage), 0, false, true;
 	end
 	
@@ -845,6 +1061,9 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 						aClausesOR = decodeAndOrClauses(sRegen);
 						if matchAndOrClauses(aClausesOR, aSrcDmgClauseTypes) then
 							bApplyRegen = false;
+							-- KEL
+							aInjury = true;
+							--END
 						end
 						
 						if bApplyRegen then
@@ -865,7 +1084,54 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 			end
 		end
 	end
-	
+	-- NKEL Define total damager per damage type (e.g. for rounding corrections in VULN and HRESIST) Therefore following for loop outside the big loop,
+	-- local nDmgTotalperType = {};
+	-- for k, v in pairs(rDamageOutput.aDamageTypes) do
+		-- GET THE INDIVIDUAL DAMAGE TYPES FOR THIS ENTRY (EXCLUDING UNTYPED DAMAGE TYPE)
+		-- local aSrcDmgClauseTypes = {};
+		-- local aTemp = StringManager.split(k, ",", true);
+		-- for i = 1, #aTemp do
+			-- if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+				-- table.insert(aSrcDmgClauseTypes, aTemp[i]);
+			-- end
+		-- end
+		-- if #aSrcDmgClauseTypes > 0 then
+			-- for _,sDmgType in pairs(aSrcDmgClauseTypes) do	
+				-- nDmgTotalperType[sDmgType] = 0;
+			-- end
+		-- end
+	-- end
+	-- NKEL Collect damage per type and make sure to avoid double counting (in very very rare situations using DMG effect with special damage type; when one is not careful one might have a damage type twice)
+	-- KEL Variables for rounding corrections of VULN and HRESIST when multiple dice are affected (and incorp). Handle each damage type separately (?) for minimizing damage and according to the definition of vulnerability which is specific to the damage type
+	local roundingvariableVulnCeil = {};
+	roundingvariableVulnCeil["all"] = false;
+	local roundingvariableHResistFloor = {};
+	roundingvariableHResistFloor["all"] = false;
+	local roundingvariableIncorpFloor = false;
+	for k, v in pairs(rDamageOutput.aDamageTypes) do
+		-- GET THE INDIVIDUAL DAMAGE TYPES FOR THIS ENTRY (EXCLUDING UNTYPED DAMAGE TYPE)
+		local aSrcDmgClauseTypes = {};
+		local aTemp = StringManager.split(k, ",", true);
+		for i = 1, #aTemp do
+			if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+				table.insert(aSrcDmgClauseTypes, aTemp[i]);
+			end
+		end
+		if #aSrcDmgClauseTypes > 0 then
+			local DMGAccounted = {};
+			for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+				-- DMGAccounted[sDmgType] = false;
+				roundingvariableVulnCeil[sDmgType] = false;
+				roundingvariableHResistFloor[sDmgType] = false;
+			end
+			-- for _,sDmgType in pairs(aSrcDmgClauseTypes) do	
+				-- if not DMGAccounted[sDmgType] then
+					-- nDmgTotalperType[sDmgType] = nDmgTotalperType[sDmgType] + v;
+					-- DMGAccounted[sDmgType] = true;
+				-- end
+			-- end
+		end
+	end
 	-- ITERATE THROUGH EACH DAMAGE TYPE ENTRY
 	local nVulnApplied = 0;
 	for k, v in pairs(rDamageOutput.aDamageTypes) do
@@ -883,147 +1149,170 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 		end
 
 		-- HANDLE IMMUNITY, VULNERABILITY AND RESISTANCE
+		-- KEL Order change; added FORTIF, HRESIST
 		local nLocalDamageAdjust = 0;
 		if #aSrcDmgClauseTypes > 0 then
 			-- CHECK FOR IMMUNITY (Must be immune to all damage types in damage source)
-			local nBasicDmgTypeMatches = 0;
+			-- KEL FORTIF, HRESIST, RESIST now work like IMMUNE w.r.t. to damage types (see 3.3.7 patch notes)
+			-- KEL IMMUNE and FORTIF handled earlier; removing its part
+			-- local nBasicDmgTypeMatches = 0;
+			-- local nBasicDmgTypeMatchesFortif = 0;
+			local nBasicDmgTypeMatchesHResist = 0;
+			
 			local nSpecialDmgTypes = 0;
-			local nSpecialDmgTypeMatches = 0;
+			-- local nSpecialDmgTypeMatches = 0;
+			-- local nSpecialDmgTypeMatchesFortif = 0;
+			local nSpecialDmgTypeMatchesHResist = 0;
+			
 			for _,sDmgType in pairs(aSrcDmgClauseTypes) do
 				if StringManager.contains(DataCommon.basicdmgtypes, sDmgType) then
-					if aImmune[sDmgType] then nBasicDmgTypeMatches = nBasicDmgTypeMatches + 1; end
+					-- if aImmune[sDmgType] then nBasicDmgTypeMatches = nBasicDmgTypeMatches + 1; end
+					-- if aFortif[sDmgType] then nBasicDmgTypeMatchesFortif = nBasicDmgTypeMatchesFortif + 1; end
+					if aHResist[sDmgType] then nBasicDmgTypeMatchesHResist = nBasicDmgTypeMatchesHResist + 1; end
 				else
 					nSpecialDmgTypes = nSpecialDmgTypes + 1;
-					if aImmune[sDmgType] then nSpecialDmgTypeMatches = nSpecialDmgTypeMatches + 1; end
+					-- if aImmune[sDmgType] then nSpecialDmgTypeMatches = nSpecialDmgTypeMatches + 1; end
+					-- if aFortif[sDmgType] then nSpecialDmgTypeMatchesFortif = nSpecialDmgTypeMatchesFortif + 1; end
+					if aHResist[sDmgType] then nSpecialDmgTypeMatchesHResist = nSpecialDmgTypeMatchesHResist + 1; end
 				end
 			end
-			local bImmune = false;
-			if (nSpecialDmgTypeMatches > 0) then
-				bImmune = true;
-			elseif (nBasicDmgTypeMatches > 0) and (nBasicDmgTypeMatches + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
-				bImmune = true;
+			-- local bImmune = false;
+			-- local bFortif = false;
+			local bHResist = false;
+			-- if (nSpecialDmgTypeMatches > 0) then
+				-- bImmune = true;
+			-- elseif (nBasicDmgTypeMatches > 0) and (nBasicDmgTypeMatches + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+				-- bImmune = true;
+			-- end
+			-- if (nSpecialDmgTypeMatchesFortif > 0) then
+				-- bFortif = true;
+			-- elseif (nBasicDmgTypeMatchesFortif > 0) and (nBasicDmgTypeMatchesFortif + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+				-- bFortif = true;
+			-- end
+			if (nSpecialDmgTypeMatchesHResist > 0) then
+				bHResist = true;
+			elseif (nBasicDmgTypeMatchesHResist > 0) and (nBasicDmgTypeMatchesHResist + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+				bHResist = true;
 			end
-			if bImmune then
+			if bImmune[k] then
 				nLocalDamageAdjust = nLocalDamageAdjust - v;
 				bResist = true;
+			elseif bFortif[k] then
+				nLocalDamageAdjust = nLocalDamageAdjust - v;
+				bResist = true;	
 			else
-				-- CHECK FORTIFICATION TO DAMAGE TYPE
-				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
-					local rRollFortif = math.random(100);	
-					local msg = {sender = "", font = "emotefont"};
-					if aFortif[sDmgType] then
-						if rRollFortif <= aFortif[sDmgType].mod then
-							nLocalDamageAdjust = nLocalDamageAdjust - v;
-							bResist = true;	
-							msg.text = "FORTIFICATION [SUCCESS]: " .. rRollFortif;
-							Comm.deliverChatMessage(msg);						
-						else
-							msg.text = "FORTIFICATION [Failure]: " .. rRollFortif;
-							Comm.deliverChatMessage(msg);
+			-- KEL For PF VULN before resistances; 3.5e: VULN at the very end
+				if bPFMode then
+					local FiniteMaxMod = 0;
+					local VulnMaxType = "";
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if aVuln[sDmgType] then
+							if FiniteMaxMod < aVuln[sDmgType].mod then
+								VulnMaxType = sDmgType;
+							end
+							FiniteMaxMod = math.max(FiniteMaxMod, aVuln[sDmgType].mod);
 						end
-					-- CHECK FORTIF ALL
-					elseif aFortif["all"] then
-						if rRollFortif <= aFortif["all"].mod then
-							nLocalDamageAdjust = nLocalDamageAdjust - v;
-							bResist = true;			
-							msg.text = "FORTIFICATION [SUCCESS]: " .. rRollFortif;
-							Comm.deliverChatMessage(msg);							
-						else
-							msg.text = "FORTIFICATION [Failure]: " .. rRollFortif;
-							Comm.deliverChatMessage(msg);
-						end	
 					end
-					-- return rRollFortif.aDice.result;
+					if aVuln["all"] then
+						if FiniteMaxMod < aVuln["all"].mod then
+							VulnMaxType = "all";
+						end
+						FiniteMaxMod = math.max(FiniteMaxMod, aVuln["all"].mod);
+					end
+					if aVuln["all"] then
+						local nVulnAmount = 0;
+						if aVuln["all"].mod == 0 and not roundingvariableVulnCeil["all"] then
+							nVulnAmount = math.floor((v + nLocalDamageAdjust) / 2);
+							aVuln["all"].nApplied = nVulnAmount;
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableVulnCeil["all"] = true;
+							end
+						elseif aVuln["all"].mod == 0 and roundingvariableVulnCeil["all"] then
+							nVulnAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+							aVuln["all"].nApplied = nVulnAmount;
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableVulnCeil["all"] = false;
+							end
+						elseif aVuln["all"].mod ~= 0 and not aVuln["all"].nApplied then
+							nVulnAmount = FiniteMaxMod;
+							aVuln[VulnMaxType].nApplied = nVulnAmount;
+						end
+						nLocalDamageAdjust = nLocalDamageAdjust + nVulnAmount;
+						bVulnerable = true;
+					end
+					local VulnApplied = false;
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if aVuln[sDmgType] and not VulnApplied and not aVuln["all"] then
+							local nVulnAmount = 0;
+							if aVuln[sDmgType].mod == 0 and not roundingvariableVulnCeil[sDmgType] then
+								nVulnAmount = math.floor((v + nLocalDamageAdjust) / 2);
+								aVuln[sDmgType].nApplied = nVulnAmount;
+								VulnApplied = true;
+								if (v + nLocalDamageAdjust) % 2 ~= 0 then
+									roundingvariableVulnCeil[sDmgType] = true;
+								end
+							elseif aVuln[sDmgType].mod == 0 and roundingvariableVulnCeil[sDmgType] then
+								nVulnAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+								aVuln[sDmgType].nApplied = nVulnAmount;	
+								VulnApplied = true;
+								if (v + nLocalDamageAdjust) % 2 ~= 0 then
+									roundingvariableVulnCeil[sDmgType] = false;
+								end
+							elseif aVuln[sDmgType].mod ~= 0 and not aVuln[sDmgType].nApplied then
+								nVulnAmount = FiniteMaxMod;
+								aVuln[VulnMaxType].nApplied = nVulnAmount;
+								VulnApplied = true;
+							end
+							nLocalDamageAdjust = nLocalDamageAdjust + nVulnAmount;
+							bVulnerable = true;
+						end
+					end
 				end
-				-- CHECK HALF RESISTANCE TO DAMAGE TYPE
+				if aHResist["all"] then
+					local nHresistAmount = 0;
+					if not roundingvariableHResistFloor["all"] then
+						nHresistAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+						if (v + nLocalDamageAdjust) % 2 ~= 0 then
+							roundingvariableHResistFloor["all"] = true;
+						end
+					else
+						nHresistAmount = math.floor((v + nLocalDamageAdjust) / 2);
+						if (v + nLocalDamageAdjust) % 2 ~= 0 then
+							roundingvariableHResistFloor["all"] = false;
+						end
+					end
+					nLocalDamageAdjust = nLocalDamageAdjust - nHresistAmount;
+					bResist = true;		
+					-- aHResist["all"].nApplied = math.ceil((nDamage + nLocalDamageAdjust) / 2);
+				end
+				-- KEL HResist vs DMGTYPE; beware corrections for rounding over multiple affected dice (change rounding of odd number involved)
+				local HResistApplied = false;
 				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
-					if aHResist[sDmgType] then
-						nLocalDamageAdjust = nLocalDamageAdjust - math.floor((v + nLocalDamageAdjust) / 2);
-						bResist = true;						
-					-- CHECK HRESIST ALL
-					elseif aHResist["all"] then
-						nLocalDamageAdjust = nLocalDamageAdjust - math.floor((v + nLocalDamageAdjust) / 2);
+					if aHResist[sDmgType] and bHResist and not aHResist["all"] and not HResistApplied then
+						HResistApplied = true;
+						local nHresistAmount = 0;
+						if not roundingvariableHResistFloor[sDmgType] then
+							nHresistAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableHResistFloor[sDmgType] = true;
+							end
+						else
+							nHresistAmount = math.floor((v + nLocalDamageAdjust) / 2);
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableHResistFloor[sDmgType] = false;
+							end
+						end
+						nLocalDamageAdjust = nLocalDamageAdjust - nHresistAmount;
 						bResist = true;	
 					end
 				end
-				-- CHECK RESISTANCE TO DAMAGE TYPE
-				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
-					if aResist[sDmgType] then
-						local nApplied = aResist[sDmgType].nApplied or 0;
-						if nApplied < aResist[sDmgType].mod then
-							local nChange = math.min((aResist[sDmgType].mod - nApplied), v + nLocalDamageAdjust);
-							aResist[sDmgType].nApplied = nApplied + nChange;
-							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
-							bResist = true;
-						end
-					-- CHECK RESIST ALL
-					elseif aResist["all"] then
-						local nApplied = aResist["all"].nApplied or 0;
-						if nApplied < aResist["all"].mod then
-							local nChange = math.min((aResist["all"].mod - nApplied), v + nLocalDamageAdjust);
-							aResist["all"].nApplied = nApplied + nChange;
-							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
-							bResist = true;
-						end
-					elseif aResist[""] then
-						local nApplied = aResist[""].nApplied or 0;
-						if nApplied < aResist[""].mod then
-							local nChange = math.min((aResist[""].mod - nApplied), v + nLocalDamageAdjust);
-							aResist[""].nApplied = nApplied + nChange;
-							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
-							bResist = true;
-						end
-					end
-				end
-				
-				-- CHECK VULN TO DAMAGE TYPES
-				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
-					if not aImmune[sDmgType] and aVuln[sDmgType] and not aVuln[sDmgType].nApplied then
-						local nVulnAmount = 0;
-						if aVuln[sDmgType].mod == 0 then
-							nVulnAmount = math.floor((v + nLocalDamageAdjust) / 2);
-						else
-							nVulnAmount = aVuln[sDmgType].mod;
-						end
-						nLocalDamageAdjust = nLocalDamageAdjust + nVulnAmount;
-						aVuln[sDmgType].nApplied = nVulnAmount;
-						bVulnerable = true;
-					end
-				end
 			end
 		end
-		
-		-- HANDLE DR  (FORM: <type> and <type> or <type> and <type>)
-		if not bHasEnergyType and (v + nLocalDamageAdjust) > 0 then
-			local bMatchAND, nMatchAND, bMatchDMG, aClausesOR;
-			
-			local bApplyDR;
-			for _,vDR in pairs(aDR) do
-				local kDR = table.concat(vDR.remainder, " ");
-				
-				if kDR == "" or kDR == "-" or kDR == "all" then
-					bApplyDR = true;
-				else
-					bApplyDR = true;
-					aClausesOR = decodeAndOrClauses(kDR);
-					if matchAndOrClauses(aClausesOR, aSrcDmgClauseTypes) then
-						bApplyDR = false;
-					end
-				end
-
-				if bApplyDR then
-					local nApplied = vDR.nApplied or 0;
-					if nApplied < vDR.mod then
-						local nChange = math.min((vDR.mod - nApplied), v + nLocalDamageAdjust);
-						vDR.nApplied = nApplied + nChange;
-						nLocalDamageAdjust = nLocalDamageAdjust - nChange;
-						bResist = true;
-					end
-				end
-			end
-		end
+		-- KEL breaking the if clause here to correct the order of DR and Incorp (always minimizing damage as rule)
+		-- Thus, be careful with local variables
 		
 		-- HANDLE INCORPOREAL (PF MODE)
+		-- KEL Also here rounding errors; also adding ghost touch
 		if bApplyIncorporeal and (v + nLocalDamageAdjust) > 0 then
 			local bIgnoreDamage = true;
 			local bApplyIncorporeal2 = true;
@@ -1041,34 +1330,362 @@ function getDamageAdjust(rSource, rTarget, nDamage, rDamageOutput)
 					nLocalDamageAdjust = -v;
 					bResist = true;
 				elseif bPFMode then
-					nLocalDamageAdjust = nLocalDamageAdjust - math.ceil((v + nLocalDamageAdjust) / 2);
+					if not roundingvariableIncorpFloor then
+						if (v + nLocalDamageAdjust) % 2 ~= 0 then
+							roundingvariableIncorpFloor = true;
+						end
+						nLocalDamageAdjust = nLocalDamageAdjust - math.ceil((v + nLocalDamageAdjust) / 2);
+					else
+						if (v + nLocalDamageAdjust) % 2 ~= 0 then
+							roundingvariableIncorpFloor = false;
+						end
+						nLocalDamageAdjust = nLocalDamageAdjust - math.floor((v + nLocalDamageAdjust) / 2);
+					end
 					bResist = true;
 				end
 			end
 		end
 		
-		-- CALCULATE NONLETHAL DAMAGE
-		local nNonlethalAdjust = 0;
-		if (v + nLocalDamageAdjust) > 0 then
-			local bNonlethal = false;
-			for keyDmgType, sDmgType in pairs(aSrcDmgClauseTypes) do
-				if sDmgType == "nonlethal" then
-					bNonlethal = true;
-					break;
+		-- HANDLE DR  (FORM: <type> and <type> or <type> and <type>)
+		-- KEL fixing DR stacking. Take biggest modifier and assign reduced dmg to that biggest DR (for that damage die; or should it be w.r.t. to total? However, should not matter since DR normally just affects weapon damage die)
+		if not bHasEnergyType and (v + nLocalDamageAdjust) > 0 then
+			local bMatchAND, nMatchAND, bMatchDMG, aClausesOR;
+			local MaxMod = 0;
+			local bApplyDR = {};
+			local MaxDRMod = 0;
+			local MaxDRType;
+			for _,vDR in pairs(aDR) do
+				local kDR = table.concat(vDR.remainder, " ");
+				if kDR == "" or kDR == "-" or kDR == "all" then
+					bApplyDR[vDR] = true;
+					if MaxDRMod < vDR.mod then
+						MaxDRType = vDR;
+						MaxDRMod = vDR.mod;
+					end
+				else
+					bApplyDR[vDR] = true;
+					aClausesOR = decodeAndOrClauses(kDR);
+					if matchAndOrClauses(aClausesOR, aSrcDmgClauseTypes) then
+						bApplyDR[vDR] = false;
+					end
+					if bApplyDR[vDR] and MaxDRMod < vDR.mod then
+						MaxDRType = vDR;
+						MaxDRMod = vDR.mod;
+					end
 				end
 			end
-			if bNonlethal then
-				nNonlethalAdjust = v + nLocalDamageAdjust;
+			for _,vDR in pairs(aDR) do
+				if bApplyDR[vDR] and vDR == MaxDRType then
+					local nApplied = vDR.nApplied or 0;
+					if nApplied < vDR.mod then
+						local nChange = math.min((vDR.mod - nApplied), v + nLocalDamageAdjust);
+						vDR.nApplied = nApplied + nChange;
+						nLocalDamageAdjust = nLocalDamageAdjust - nChange;
+						bResist = true;
+					end
+				end
 			end
 		end
+		
+		-- KEL going back to the initial if clause
+		if #aSrcDmgClauseTypes > 0 then
+			if not bImmune[k] and not bFortif[k] then
+				local MaxResistMod = 0;
+				local MaxDmgType = "";
+				local nSpecialDmgTypes = 0;
+				local nBasicDmgTypeMatchesResist = 0;
+				local nSpecialDmgTypeMatchesResist = 0;
+				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+					if StringManager.contains(DataCommon.basicdmgtypes, sDmgType) then
+						if aResist[sDmgType] then nBasicDmgTypeMatchesResist = nBasicDmgTypeMatchesResist + 1; end
+					else
+						nSpecialDmgTypes = nSpecialDmgTypes + 1;
+						if aResist[sDmgType] then nSpecialDmgTypeMatchesResist = nSpecialDmgTypeMatchesResist + 1; end
+					end
+				end
+				local cResist = false;
+				if (nSpecialDmgTypeMatchesResist > 0) then
+					cResist = true;
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if not StringManager.contains(DataCommon.basicdmgtypes, sDmgType) and aResist[sDmgType] then
+							if MaxResistMod < aResist[sDmgType].mod then
+								MaxDmgType = sDmgType;
+							end
+							MaxResistMod = math.max(MaxResistMod, aResist[sDmgType].mod);
+						end
+					end
+				end
+				if (nBasicDmgTypeMatchesResist > 0) and (nBasicDmgTypeMatchesResist + nSpecialDmgTypes) == #aSrcDmgClauseTypes then
+					cResist = true;
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if StringManager.contains(DataCommon.basicdmgtypes, sDmgType) and aResist[sDmgType] then
+							if MaxResistMod < aResist[sDmgType].mod then
+								MaxDmgType = sDmgType;
+							end
+							MaxResistMod = math.max(MaxResistMod, aResist[sDmgType].mod);
+						end
+					end
+				end
+				-- CHECK RESISTANCE TO DAMAGE TYPE
+				-- KEL Rewriting that such that Resist- all etc. is not ignored for fire damage when Resist fire is there, too. Beware stacking.
+				-- KEL Also avoid stacking of Resist slashing and piercing against daggers and so on
+				local ResistApplied = false;
+				for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+					if aResist[sDmgType] and cResist and not ResistApplied then
+						local nApplied = aResist[sDmgType].nApplied or 0;
+						if nApplied < MaxResistMod then
+							local nChange = math.min((MaxResistMod - nApplied), v + nLocalDamageAdjust);
+							aResist[sDmgType].nApplied = nApplied + nChange;
+							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
+							bResist = true;
+							ResistApplied = true;
+						end
+					end
+					-- CHECK RESIST ALL
+					local HandleAll = true;
+					if aResist["all"] and aResist[""] then						
+						if aResist["all"].mod < aResist[""].mod then
+							HandleAll = false;
+						end
+					elseif not aResist["all"] and aResist[""] then
+						HandleAll = false;
+					end
+					if aResist["all"] and HandleAll then
+						local nApplied = aResist["all"].nApplied or 0;
+						local HandleStacking = true;
+						if aResist[sDmgType] and cResist then
+							if aResist["all"].mod < MaxResistMod then
+								HandleStacking = false;
+							end
+							local AlreadyApplied = aResist[sDmgType].nApplied or 0;
+							nApplied = nApplied + AlreadyApplied;
+						end
+						if nApplied < aResist["all"].mod and HandleStacking then
+							local nChange = math.min((aResist["all"].mod - nApplied), v + nLocalDamageAdjust);
+							aResist["all"].nApplied = nApplied + nChange;
+							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
+							ResistApplied = true;
+							bResist = true;
+						end
+					end
+					if aResist[""] and not HandleAll then
+						local nApplied = aResist[""].nApplied or 0;
+						local HandleStacking = true;
+						if aResist[sDmgType] and cResist then
+							if aResist[""].mod < MaxResistMod then
+								HandleStacking = false;
+							end
+							local AlreadyApplied = aResist[sDmgType].nApplied or 0;
+							nApplied = nApplied + AlreadyApplied;
+						end
+						if nApplied < aResist[""].mod and HandleStacking then
+							local nChange = math.min((aResist[""].mod - nApplied), v + nLocalDamageAdjust);
+							aResist[""].nApplied = nApplied + nChange;
+							nLocalDamageAdjust = nLocalDamageAdjust - nChange;
+							ResistApplied = true;
+							bResist = true;
+						end
+					end
+				end
+				
+				-- CHECK VULN TO DAMAGE TYPES
+				-- KEL nLocalDamageAdjust in nVulnAmount and VULN fix, stacking and blah fix
+				-- KEL Note/Beware: VULN: (N) overwrites VULN with no number; added VULN: all which overwrites all
+				if not bPFMode then
+					local FiniteMaxMod = 0;
+					local VulnMaxType = "";
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if aVuln[sDmgType] then
+							if FiniteMaxMod < aVuln[sDmgType].mod then
+								VulnMaxType = sDmgType;
+							end
+							FiniteMaxMod = math.max(FiniteMaxMod, aVuln[sDmgType].mod);
+						end
+					end
+					if aVuln["all"] then
+						if FiniteMaxMod < aVuln["all"].mod then
+							VulnMaxType = "all";
+						end
+						FiniteMaxMod = math.max(FiniteMaxMod, aVuln["all"].mod);
+					end
+					if aVuln["all"] then
+						local nVulnAmount = 0;
+						if aVuln["all"].mod == 0 and not roundingvariableVulnCeil["all"] then
+							nVulnAmount = math.floor((v + nLocalDamageAdjust) / 2);
+							aVuln["all"].nApplied = nVulnAmount;
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableVulnCeil["all"] = true;
+							end
+						elseif aVuln["all"].mod == 0 and roundingvariableVulnCeil["all"] then
+							nVulnAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+							aVuln["all"].nApplied = nVulnAmount;
+							if (v + nLocalDamageAdjust) % 2 ~= 0 then
+								roundingvariableVulnCeil["all"] = false;
+							end
+						elseif aVuln["all"].mod ~= 0 and not aVuln["all"].nApplied then
+							nVulnAmount = FiniteMaxMod;
+							aVuln[VulnMaxType].nApplied = nVulnAmount;
+						end
+						nLocalDamageAdjust = nLocalDamageAdjust + nVulnAmount;
+						bVulnerable = true;
+					end
+					local VulnApplied = false;
+					for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+						if aVuln[sDmgType] and not VulnApplied and not aVuln["all"] then
+							local nVulnAmount = 0;
+							if aVuln[sDmgType].mod == 0 and not roundingvariableVulnCeil[sDmgType] then
+								nVulnAmount = math.floor((v + nLocalDamageAdjust) / 2);
+								aVuln[sDmgType].nApplied = nVulnAmount;
+								VulnApplied = true;
+								if (v + nLocalDamageAdjust) % 2 ~= 0 then
+									roundingvariableVulnCeil[sDmgType] = true;
+								end
+							elseif aVuln[sDmgType].mod == 0 and roundingvariableVulnCeil[sDmgType] then
+								nVulnAmount = math.ceil((v + nLocalDamageAdjust) / 2);
+								aVuln[sDmgType].nApplied = nVulnAmount;	
+								VulnApplied = true;
+								if (v + nLocalDamageAdjust) % 2 ~= 0 then
+									roundingvariableVulnCeil[sDmgType] = false;
+								end
+							elseif aVuln[sDmgType].mod ~= 0 and not aVuln[sDmgType].nApplied then
+								nVulnAmount = FiniteMaxMod;
+								aVuln[VulnMaxType].nApplied = nVulnAmount;
+								VulnApplied = true;
+							end
+							nLocalDamageAdjust = nLocalDamageAdjust + nVulnAmount;
+							bVulnerable = true;
+						end
+					end
+				end
+			end
+			
+			-- CALCULATE NONLETHAL DAMAGE
+			local nNonlethalAdjust = 0;
+			if (v + nLocalDamageAdjust) > 0 then
+				local bNonlethal = false;
+				for keyDmgType, sDmgType in pairs(aSrcDmgClauseTypes) do
+					if sDmgType == "nonlethal" then
+						bNonlethal = true;
+						break;
+					end
+				end
+				if bNonlethal then
+					nNonlethalAdjust = v + nLocalDamageAdjust;
+				end
+			end
 
-		-- APPLY DAMAGE ADJUSTMENT FROM THIS DAMAGE CLAUSE TO OVERALL DAMAGE ADJUSTMENT
-		nDamageAdjust = nDamageAdjust + nLocalDamageAdjust - nNonlethalAdjust;
-		nNonlethal = nNonlethal + nNonlethalAdjust;
+			-- APPLY DAMAGE ADJUSTMENT FROM THIS DAMAGE CLAUSE TO OVERALL DAMAGE ADJUSTMENT
+			nDamageAdjust = nDamageAdjust + nLocalDamageAdjust - nNonlethalAdjust;
+			nNonlethal = nNonlethal + nNonlethalAdjust;
+		end
 	end
 
 	-- RESULTS
-	return nDamageAdjust, nNonlethal, bVulnerable, bResist;
+	return nDamageAdjust, nNonlethal, bVulnerable, bResist, aInjury;
+end
+
+-- KEL Fortification roll
+function onFortification(rSource, rTarget, rRoll)
+	local rDamageOutput = decodeDamageText(tonumber(rRoll.aTotal), rRoll.aMessagetext);
+	local FortifSuccess = {};
+	local m = 1;
+	local bImmune = {};
+	local bFortif = {};
+	local MaxFortifMod = {};
+	if rTarget then
+		for k, v in pairs(rDamageOutput.aDamageTypes) do
+			local l = "KELFORTIF " .. k;
+			local m = "KELFORTIFMOD " .. k;
+			local aSrcDmgClauseTypes = {};
+			local aTemp = StringManager.split(k, ",", true);
+			for i = 1, #aTemp do
+				if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+					table.insert(aSrcDmgClauseTypes, aTemp[i]);
+				end
+			end
+			if #aSrcDmgClauseTypes > 0 then
+				bImmune["all"] = rRoll.ImmuneAll;
+				bFortif["all"] = rRoll.FortifAll;
+				bImmune[k] = rRoll[k];
+				bFortif[k] = rRoll[l];
+				MaxFortifMod[k] = tonumber(rRoll[m]);
+			end
+		end
+		for k, v in pairs(rDamageOutput.aDamageTypes) do
+			local aSrcDmgClauseTypes = {};
+			local aTemp = StringManager.split(k, ",", true);
+			for i = 1, #aTemp do
+				if aTemp[i] ~= "untyped" and aTemp[i] ~= "" then
+					table.insert(aSrcDmgClauseTypes, aTemp[i]);
+				end
+			end
+			if #aSrcDmgClauseTypes > 0 then
+				-- local FortifApplied = false;
+				-- for _,sDmgType in pairs(aSrcDmgClauseTypes) do
+				if bFortif[k] == "true" and bFortif["all"] == "false" and bImmune[k] == "false" and bImmune["all"] == "false" then
+					-- FortifApplied = true;
+					local index = {};
+					local o = 1;
+					for _,n in ipairs(rRoll.aDice) do
+						index[n] = o;
+						o = o + 1;
+					end
+					for _,n in ipairs(rRoll.aDice) do
+						if index[n] == m then
+							local aRoll ={};
+							aRoll.sType = rRoll.sType;
+							aRoll.aDice = {n};
+							aRoll.nMod = rRoll.nMod;
+							aRoll.sDesc = "[FORTIFICATION CHANCE " .. MaxFortifMod[k] .. "]" .. "[vs. " .. k .. "]" .. "[to " .. ActorManager.getDisplayName(rTarget) .. "]";
+							local rMessage = ActionsManager.createActionMessage(rSource, aRoll);
+							if n.result <= MaxFortifMod[k] then
+								FortifSuccess[k] = "true";
+								rMessage.text = rMessage.text .. "[ZERO DMG]";
+								rMessage.icon = "roll_attack_miss";
+							else
+								FortifSuccess[k] = "false";
+								rMessage.text = rMessage.text .. "[FULL DMG]";
+								rMessage.icon = "roll_attack_hit";
+							end
+							Comm.deliverChatMessage(rMessage);
+						end
+					end
+					m = m + 1;
+				end
+				-- end
+				if bFortif["all"] == "true" and bImmune["all"] == "false" and bImmune[k] == "false" then
+					local index = {};
+					local o = 1;
+					for _,n in ipairs(rRoll.aDice) do
+						index[n] = o;
+						o = o + 1;
+					end
+					for _,n in ipairs(rRoll.aDice) do
+						if index[n] == m then
+							local aRoll ={};
+							aRoll.sType = rRoll.sType;
+							aRoll.aDice = {n};
+							aRoll.nMod = rRoll.nMod;
+							aRoll.sDesc = "[FORTIFICATION CHANCE " .. MaxFortifMod[k] .. "]" .. "[vs. " .. k .. "]" .. "[to " .. ActorManager.getDisplayName(rTarget) .. "]";
+							local rMessage = ActionsManager.createActionMessage(rSource, aRoll);
+							if n.result <= MaxFortifMod[k] then
+								FortifSuccess[k] = "true";
+								rMessage.text = rMessage.text .. "[ZERO DMG]";
+								rMessage.icon = "roll_attack_miss";
+							else
+								FortifSuccess[k] = "false";
+								rMessage.text = rMessage.text .. "[FULL DMG]";
+								rMessage.icon = "roll_attack_hit";
+							end
+							Comm.deliverChatMessage(rMessage);
+						end
+					end
+					m = m + 1;
+				end
+			end
+		end
+	end
+	notifyApplyDamage(rSource, rTarget, rRoll.bTower, rRoll.aType, rRoll.aMessagetext, tonumber(rRoll.aTotal), bImmune, FortifSuccess);
 end
 
 -- Collapse damage clauses by damage type (in the original order, if possible)
@@ -1125,7 +1742,6 @@ end
 function decodeDamageText(nDamage, sDamageDesc)
 	local rDamageOutput = {};
 	rDamageOutput.sOriginal = sDamageDesc;
-	
 	if string.match(sDamageDesc, "%[HEAL") then
 		if string.match(sDamageDesc, "%[TEMP%]") then
 			rDamageOutput.sType = "temphp";
@@ -1169,8 +1785,8 @@ function decodeDamageText(nDamage, sDamageDesc)
 
 		-- Determine critical
 		rDamageOutput.bCritical = string.match(sDamageDesc, "%[CRITICAL%]");
-        
-        -- Determine injury
+		
+		-- Determine injury
         rDamageOutput.bInjury = string.match(sDamageDesc, "%[INJURY%]") or rDamageOutput.bCritical;
 
 		-- Determine range
@@ -1220,8 +1836,8 @@ function decodeDamageText(nDamage, sDamageDesc)
 	
 	return rDamageOutput;
 end
-
-function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
+-- KEL bImmune, bFortif
+function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal, bImmune, bFortif)
 	local nTotalHP = 0;
 	local nTempHP = 0;
 	local nWounds = 0;
@@ -1254,6 +1870,7 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 
 	-- Decode damage/heal description
 	local rDamageOutput = decodeDamageText(nTotal, sDamage);
+	local aRegenEffectsToDisable = {};
 
 	-- Healing
 	if rDamageOutput.sType == "heal" or rDamageOutput.sType == "fheal" then
@@ -1272,11 +1889,6 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 			local nWoundHealAmount = math.min(nHealAmount - nInjuryHealAmount, nWounds);
 			nWounds = nWounds - nWoundHealAmount;
 			
-			-- IF WE HEALED FROM NEGATIVE TO ZERO OR HIGHER, THEN REMOVE STABLE EFFECT
-			if (nOriginalWounds + nOriginalInjury > nTotalHP) and (nWounds + nInjury <= nTotalHP) then
-				EffectManager.removeEffect(ActorManager.getCTNode(rTarget), "Stable");
-			end
-			
 			-- SET THE ACTUAL HEAL AMOUNT FOR DISPLAY
 			rDamageOutput.nVal = nWoundHealAmount + nInjuryHealAmount;
 			if nWoundHealAmount + nInjuryHealAmount > 0 then
@@ -1287,12 +1899,13 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 		end
 
 	-- Regeneration
+	-- KEL replacing nonlethal (only important for 3.5e, in Pathfinder stype="regen" not possible
 	elseif rDamageOutput.sType == "regen" then
-		if nNonlethal <= 0 then
+		if nWounds <= 0 then
 			table.insert(aNotifications, "[NO NONLETHAL DAMAGE]");
 		else
-			local nNonlethalHealAmount = math.min(rDamageOutput.nVal, nNonlethal);
-			nNonlethal = nNonlethal - nNonlethalHealAmount;
+			local nNonlethalHealAmount = math.min(rDamageOutput.nVal, nWounds);
+			nWounds = nWounds - nNonlethalHealAmount;
 			
 			rDamageOutput.nVal = nNonlethalHealAmount;
 			rDamageOutput.sVal = "" .. nNonlethalHealAmount .. " NL";
@@ -1392,7 +2005,13 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 		end
 		
 		-- Apply damage type adjustments
-		local nDamageAdjust, nNonlethalDmgAmount, bVulnerable, bResist = getDamageAdjust(rSource, rTarget, nTotal, rDamageOutput);
+		-- KEL bImmune, bFortif
+		-- KEL Adding Injury information
+		local nDamageAdjust, nNonlethalDmgAmount, bVulnerable, bResist, aInjury = getDamageAdjust(rSource, rTarget, nTotal, rDamageOutput, bImmune, bFortif);
+		if aInjury then
+			rDamageOutput.bInjury = aInjury;
+		end
+		-- END
 		local nAdjustedDamage = nTotal + nDamageAdjust;
 		if nAdjustedDamage < 0 then
 			nAdjustedDamage = 0;
@@ -1469,7 +2088,7 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 								end
 								
 								if bMatch then
-									EffectManager.disableEffect(nodeTargetCT, v);
+									table.insert(aRegenEffectsToDisable, v);
 								end
 							end
 						end
@@ -1504,6 +2123,7 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 	end
 
 	-- Check for status change
+	local _,_,sNewStatus = ActorManager2.getPercentWounded(sTargetType, nodeTarget);
 	local bShowStatus = false;
 	if ActorManager.getFaction(rTarget) == "friend" then
 		bShowStatus = not OptionsManager.isOption("SHPC", "off");
@@ -1511,9 +2131,31 @@ function applyDamage(rSource, rTarget, bSecret, sRollType, sDamage, nTotal)
 		bShowStatus = not OptionsManager.isOption("SHNPC", "off");
 	end
 	if bShowStatus then
-		local _,_,sNewStatus = ActorManager2.getPercentWounded(sTargetType, nodeTarget);
 		if sOriginalStatus ~= sNewStatus then
 			table.insert(aNotifications, "[" .. Interface.getString("combat_tag_status") .. ": " .. sNewStatus .. "]");
+		end
+	end
+	
+	-- Manage Regeneration effect state when hit with disabling damage
+	if #aRegenEffectsToDisable > 0 then
+		local nodeTargetCT = ActorManager.getCTNode(rTarget);
+		for _,v in ipairs(aRegenEffectsToDisable) do
+			if sNewStatus == "Dead" then
+				EffectManager.deactivateEffect(nodeTargetCT, v);
+			else
+				EffectManager.disableEffect(nodeTargetCT, v);
+			end
+		end
+	end
+	
+	-- Manage Stable effect add/remove when healed
+	if (sOriginalStatus == "Dying") or (sOriginalStatus == "Dead") then
+		if (sNewStatus ~= "Dying") and (sNewStatus ~= "Dead") then
+			ActorManager2.removeStableEffect(rTarget);
+		else
+			if ((rDamageOutput.sType == "heal") or (rDamageOutput.sType == "fheal") or (rDamageOutput.sType == "regen")) and (rDamageOutput.nVal > 0) then
+				ActorManager2.applyStableEffect(rTarget);
+			end
 		end
 	end
 	
@@ -1576,11 +2218,11 @@ function applyFailedStabilization(rActor)
 	if sActorType == "pc" then
 		nTotalHP = DB.getValue(nodeActor, "hp.total", 0);
 		nTempHP = DB.getValue(nodeActor, "hp.temporary", 0);
-		nWounds = DB.getValue(nodeActor, "hp.wounds", 0);
+		nWounds = DB.getValue(nodeActor, "hp.injury", 0);
 	else
 		nTotalHP = DB.getValue(nodeActor, "hp", 0);
 		nTempHP = DB.getValue(nodeActor, "hptemp", 0);
-		nWounds = DB.getValue(nodeActor, "wounds", 0);
+		nWounds = DB.getValue(nodeActor, "injury", 0);
 	end
 	
 	-- Remember current health status
@@ -1610,10 +2252,10 @@ function applyFailedStabilization(rActor)
 	-- Set health fields
 	if sActorType == "pc" then
 		DB.setValue(nodeActor, "hp.temporary", "number", nTempHP);
-		DB.setValue(nodeActor, "hp.wounds", "number", nWounds);
+		DB.setValue(nodeActor, "hp.injury", "number", nWounds);
 	else
 		DB.setValue(nodeActor, "hptemp", "number", nTempHP);
-		DB.setValue(nodeActor, "wounds", "number", nWounds);
+		DB.setValue(nodeActor, "injury", "number", nWounds);
 	end
 
 	-- Check for status change

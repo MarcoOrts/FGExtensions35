@@ -467,6 +467,10 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 	if rRoll.sType == "attack" then
 		bTouch = string.match(sAttack, "%[TOUCH%]");
 	end
+	local bIncorporealAttack = false;
+	if string.match(sAttack, "%[INCORPOREAL%]") then
+		bIncorporealAttack = true;
+	end
 	local bFlatFooted = string.match(sAttack, "%[FF%]");
 	local nCover = tonumber(string.match(sAttack, "%[COVER %-(%d)%]")) or 0;
 	local bConceal = string.match(sAttack, "%[CONCEAL%]");
@@ -640,6 +644,7 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 			nBonusSituational = nBonusSituational - 1;
 		end
 		if EffectManager35E.hasEffect(rDefender, "Flat-footed") or 
+				EffectManager35E.hasEffect(rDefender, "Flatfooted") or 
 				EffectManager35E.hasEffect(rDefender, "Climbing") or 
 				EffectManager35E.hasEffect(rDefender, "Running") then
 			bCombatAdvantage = true;
@@ -756,17 +761,17 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 				end
 			end
 		end
-		if not bFlatFooted and sDefenseStat == "dexterity" then
+		if not bFlatFooted and not bCombatAdvantage and sDefenseStat == "dexterity" then
 			nFlatFootedMod = nFlatFootedMod + nBonusStat1;
 		end
 		nBonusStat = nBonusStat + nBonusStat1;
 		local nBonusStat2 = getAbilityEffectsBonus(rDefender, sDefenseStat2);
-		if not bFlatFooted and sDefenseStat2 == "dexterity" then
+		if not bFlatFooted and not bCombatAdvantage and sDefenseStat2 == "dexterity" then
 			nFlatFootedMod = nFlatFootedMod + nBonusStat2;
 		end
 		nBonusStat = nBonusStat + nBonusStat2;
 		local nBonusStat3 = getAbilityEffectsBonus(rDefender, sDefenseStat3);
-		if not bFlatFooted and sDefenseStat3 == "dexterity" then
+		if not bFlatFooted and not bCombatAdvantage and sDefenseStat3 == "dexterity" then
 			nFlatFootedMod = nFlatFootedMod + nBonusStat3;
 		end
 		nBonusStat = nBonusStat + nBonusStat3;
@@ -826,42 +831,47 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 		
 		-- GET DEFENDER SITUATIONAL MODIFIERS - CONCEALMENT
 		local aConceal = EffectManager35E.getEffectsByType(rDefender, "TCONC", aAttackFilter, rAttacker);
+		-- Variable concealment
+		local aVConcealEffect, aVConcealCount = EffectManager35E.getEffectsBonusByType(rDefender, "VCONC", true, aAttackFilter, rAttacker);
+		
+		if aVConcealCount > 0 then
+			for _,v in  pairs(aVConcealEffect) do
+				nMissChance = math.max(v.mod,nMissChance);
+			end
+		end
+		-- END variable concealment but math.max in the following ifs needed such that CONC and TCONC etc. do not overwrite VCONC and only maximum value is taken
 		if #aConceal > 0 or EffectManager35E.hasEffect(rDefender, "TCONC", rAttacker) or bTotalConceal or bAttackerBlinded then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		else
 			aConceal = EffectManager35E.getEffectsByType(rDefender, "CONC", aAttackFilter, rAttacker);
 			if #aConceal > 0 or EffectManager35E.hasEffect(rDefender, "CONC", rAttacker) or bConceal then
-				nMissChance = 20;
+				nMissChance = math.max(20,nMissChance);
 			end
 		end
 		
 		-- CHECK INCORPOREALITY
 		if not bPFMode then
-			local bIncorporealAttack = false;
-			if string.match(sAttack, "%[INCORPOREAL%]") then
-				bIncorporealAttack = true;
-			end
 			local bIncorporealDefender = EffectManager35E.hasEffect(rDefender, "Incorporeal", rAttacker);
 			local bGhostTouchAttacker = EffectManager35E.hasEffect(rAttacker, "ghost touch", rDefender);
 
 			if bIncorporealDefender and not bGhostTouchAttacker and not bIncorporealAttack then
-				nMissChance = 50;
+				nMissChance = math.max(50,nMissChance);
 			end
 		end
 		
 		-- ADD IN EFFECT MODIFIERS
 		nDefenseEffectMod = nBonusAC + nBonusStat + nBonusSituational;
 	
-	-- NO DEFENDER SPECIFIED, SO JUST LOOK AT THE ATTACK ROLL MODIFIERS
+	-- NO DEFENDER SPECIFIED, SO JUST LOOK AT THE ATTACK ROLL MODIFIERS, here no math.max needed but to be sure...
 	else
 		if bTotalConceal or bAttackerBlinded then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		elseif bConceal then
-			nMissChance = 20;
+			nMissChance = math.max(20,nMissChance);
 		end
-		
+		-- KEL the following is useless :)
 		if bIncorporealAttack then
-			nMissChance = 50;
+			nMissChance = math.max(50,nMissChance);
 		end
 	end
 	
@@ -1082,4 +1092,21 @@ function isCreatureType(rActor, sTypeCheck)
 		end
 	end
 	return bReturn;
+end
+
+
+function applyStableEffect(rActor)
+	if EffectManager35E.hasEffectCondition(rActor, "Stable") then return; end
+	
+	local nodeCT = ActorManager.getCTNode(rActor);
+	local aEffect = { sName = "Stable", nDuration = 0 };
+	if ActorManager.getFaction(rActor) ~= "friend" then
+		aEffect.nGMOnly = 1;
+	end
+	EffectManager.addEffect("", "", nodeCT, aEffect, true);
+end
+
+function removeStableEffect(rActor)
+	local nodeCT = ActorManager.getCTNode(rActor);
+	EffectManager.removeEffect(nodeCT, "Stable");
 end
