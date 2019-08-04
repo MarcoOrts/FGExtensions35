@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the readme.txt file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root version="3.0" release="4">
+	<announcement text="Leather and Dungeon Mix Theme for Fantasy Grounds\rCopyright 2015 Smiteworks USA, LLC." font="emotefont" icon="rulesetlogo_CoreRPG" />
+
+	<properties>
+		<name>Theme - Leather and Dungeon Mix</name>
+		<version>4</version>
+		<author>SmiteWorks USA, LLC</author>
+		<description>Theme extension for CoreRPG, 3.5E, 4E and PFRPG rulesets</description>
+		<loadorder>15</loadorder>
+		<ruleset>
+			<name>CoreRPG</name>
+		</ruleset>
+		<ruleset>
+			<name>3.5E</name>
+		</ruleset>
+		<ruleset>
+			<name>4E</name>
+		</ruleset>
+		<ruleset>
+			<name>Castles and Crusades</name>
+		</ruleset>
+		<ruleset>
+			<name>CallOfCthulhu</name>
+		</ruleset>
+		<ruleset>
+			<name>CallOfCthulhu7E</name>
+		</ruleset>
+		<ruleset>
+			<name>d20 Modern</name>
+		</ruleset>
+		<ruleset>
+			<name>Fate Core</name>
+		</ruleset>
+		<ruleset>
+			<name>PFRPG</name>
+		</ruleset>
+		<ruleset>
+			<name>13th_Age</name>
+		</ruleset>
+	</properties>
+
+	<base>
+		<includefile source="graphics/graphics_fonts.xml" />
+		<includefile source="graphics/graphics_frames.xml" />
+		<includefile source="graphics/graphics_portraits.xml" />
+		<includefile source="graphics/graphics_misc.xml" />
+	</base>
+</root>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<font name="reference-h">
+		<ttf file="graphics/fonts/MarcellusSC-Regular.ttf" name="Marcellus SC" size="24" />
+		<color value="#000000" />
+	</font>
+
+	<font name="modcollector">
+		<fgffile name="graphics/fonts/diemod.fgf" />
+		<color value="#FFFFFF" />
+	</font>
+	<font name="modcollectorlabel">
+		<fgffile name="graphics/fonts/modcollectorlabel.fgf" />
+		<color value="#BBBBBB" />
+	</font>
+</root>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the readme.txt file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<icon name="charlist_base" file="graphics/portraits/portrait.png" />
+	<icon name="charlist_mask" file="graphics/portraits/portrait_mask.png" />
+	<icon name="targetportrait_base" file="graphics/portraits/portrait_target.png" />
+	<icon name="targetportrait_mask" file="graphics/portraits/portrait_target_mask.png" />
+	<icon name="portraittoken_base" file="graphics/portraits/portrait_token.png" />
+	<icon name="portraittoken_mask" file="graphics/portraits/portrait_token_mask.png" />
+	<icon name="miniportrait_base" file="graphics/portraits/portrait_mini.png" />
+	<icon name="miniportrait_mask" file="graphics/portraits/portrait_mini_mask.png" />
+</root>

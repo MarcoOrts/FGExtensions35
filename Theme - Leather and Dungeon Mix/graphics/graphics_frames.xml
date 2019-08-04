@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the readme.txt file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root version="2.0">
+	<!-- Utility frames -->
+	<framedef name="desktop">
+		<bitmap file="graphics/frames/desktop.png" />
+		<middle rect="0,0,512,512" />
+	</framedef>
+	<framedef name="shortcuts">
+		<bitmap file="graphics/frames/desktop.png" />
+		<left rect="512,0,10,512" />
+		<middle rect="522,0,80,512" />
+		<right rect="602,0,10,512" />
+	</framedef>
+
+	<framedef name="chatbox">
+		<bitmap file="graphics/frames/chatbox.png" />
+		<topleft rect="0,0,150,220" />
+		<top rect="150,0,200,220" />
+		<topright rect="350,0,179,220" />
+		<left rect="0,220,150,130" />
+		<middle rect="150,220,200,130" />
+		<right rect="350,220,179,130" />
+		<bottomleft rect="0,300,150,184" />
+		<bottom rect="150,300,200,184" />
+		<bottomright rect="350,300,179,184" />
+	</framedef>
+
+	<!-- Hot key bar -->	
+	<framedef name="hotkeybox">
+		<bitmap file="graphics/frames/hotkeybox.png" />
+		<topleft rect="0,0,2,5" />
+		<top rect="2,0,146,5" />
+		<topright rect="130,0,20,5" />
+		<left rect="0,5,12,95" />
+		<middle rect="12,5,136,95" />
+		<right rect="130,5,20,95" />
+		<bottomleft rect="0,50,2,2" />
+		<bottom rect="2,50,146,2" />
+		<bottomright rect="130,100,20,2" />
+	</framedef>
+	
+	<framedef name="hotkeytitlebox">
+		<bitmap file="graphics/frames/hotkeytitlebox.png" />
+		<middle rect="0,0,38,11" />
+		<right rect="38,0,4,11" />
+		<bottom rect="0,11,38,5" />
+		<bottomright rect="38,11,4,5" />
+	</framedef>
+
+	<!-- Token Bag -->
+	<framedef name="tokenbag">
+		<bitmap file="graphics/frames/tokenbag.png" />
+		<topleft rect="0,0,16,16" />
+		<top rect="16,0,512,16" />
+		<topright rect="528,0,32,16" />
+		<left rect="0,16,16,512" />
+		<middle rect="16,16,512,512" />
+		<right rect="538,16,22,512" />
+		<bottomleft rect="0,528,16,32" />
+		<bottom rect="16,528,512,32" />
+		<bottomright rect="528,528,32,32" />
+		<insideoffset>0,0,12,14</insideoffset>
+	</framedef>
+	
+	<!-- Menu Bar Theme Frame - Dulux-Oz request -->
+	<framedef name="frmMenubarTheme">
+		<bitmap file="graphics/frames/desktop.png" />
+		<left rect="512,0,25,512" />
+		<middle rect="537,0,35,512" />
+		<right rect="572,0,40,512" />
+	</framedef>
+	
+	<!-- Chat window -->
+	<framedef name="chatbox">
+		<bitmap file="graphics/frames/chatbox.png" />
+		<offset>44,44,44,44</offset>
+		<insideoffset>0,0,7,3</insideoffset>
+	</framedef>
+	
+	<!-- Desktop background -->
+	<framedef name="desktop">
+		<bitmap file="graphics/frames/desktop.png" />
+		<topleft rect="0,0,15,15" />
+		<top rect="15,0,485,15" />
+		<left rect="0,15,15,485" />
+		<middle rect="15,15,485,485" />
+		<bottomleft rect="0,500,15,15" />
+		<bottom rect="15,500,480,15" />
+	</framedef>
+	<framedef name="shortcuts">
+		<bitmap file="graphics/frames/desktop.png" />
+		<topleft rect="500,0,15,15" />
+		<left rect="500,15,15,500" />
+		<middle rect="515,0,50,100" />
+		<topright rect="500,0,11,15" />
+		<right rect="500,15,11,500" />
+	</framedef>
+</root>
