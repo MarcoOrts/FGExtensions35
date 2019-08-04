@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<!-- Antimagic in CT -->
+	<string name="ct_tooltip_antimagicOn">Turn antimagic on</string>
+	<string name="ct_tooltip_antimagicOnAll">Turn antimagic on for all</string>
+	<string name="ct_tooltip_antimagicOff">Turn antimagic off</string>
+	<string name="ct_tooltip_antimagicOffAll">Turn antimagic off for all</string>
+</root>

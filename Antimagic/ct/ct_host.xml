@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<windowclass name="combattracker_host" merge="join">
+		<sheetdata>
+			<!-- Global Antimagic -->
+			<buttoncontrol name="button_global_antimagic">
+				<!-- <anchored position="insidetopleft" offset="53,37" width="20" height="20" /> -->
+				<bounds>23,30,12,12</bounds>
+				<state icon="cond_vulnerable" tooltipres="ct_tooltip_antimagicOffAll" />
+				<state icon="cond_resistance" tooltipres="ct_tooltip_antimagicOnAll" />
+				<default>1</default>
+				<script>
+					function onValueChanged()
+						local antimagicon = getValue();
+						for _,v in pairs(window.list.getWindows()) do
+							if antimagicon ~= v.activateantimagic.getValue() then
+								v.activateantimagic.setValue(antimagicon);
+							end
+						end
+					end
+				</script>
+			</buttoncontrol>
+			<!-- End -->
+		</sheetdata>
+	</windowclass>
+	
+	<windowclass name="ct_entry" merge = "join">
+		<sheetdata>
+			<!-- Antimagic -->
+			<button_antimagic name="activateantimagic" />
+			<!-- end -->
+		</sheetdata>
+	</windowclass>
+
+</root>

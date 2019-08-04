@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<!-- Antimagic -->
+	<template name="button_antimagic">
+		<buttonfield name="activateantimagic">
+			<anchored to="token" position="lefthigh" offset="-6,0" width="12" height="12" />
+			<default>1</default>
+			<state icon="cond_vulnerable" tooltipres="ct_tooltip_antimagicOff" />
+			<state icon="cond_resistance" tooltipres="ct_tooltip_antimagicOn" />
+			<script>
+				function onValueChanged()
+					local node = window.getDatabaseNode();
+					for _,v in pairs(DB.getChildren(node, "effects")) do
+						local nActive = DB.getValue(v, "isactive", 0);
+						if string.match(DB.getValue(v, "label", ""), "MAGIC") then
+							DB.setValue(v, "isactive", "number", getValue());
+						end
+						if string.match(DB.getValue(v, "label", ""), "ANTI") and getValue() == 1 then
+							DB.setValue(v, "isactive", "number", 0);
+						end
+						if string.match(DB.getValue(v, "label", ""), "ANTI") and getValue() == 0 then
+							DB.setValue(v, "isactive", "number", 1);
+						end
+					end
+				end
+			</script>
+		</buttonfield>
+	</template>
+	<!-- end -->
+</root>
