@@ -17,7 +17,6 @@
 	<script name="DataCommon" file="scripts/data_common.lua" />
 	<script name="GameSystem" file="scripts/manager_gamesystem.lua" />
 	<script name="ActorManager2" file="scripts/manager_actor2.lua" />
-	<script name="CombatManager2" file="scripts/manager_combat2.lua" />
 	<script name="ActionAttack" file="scripts/manager_action_attack.lua" />
     <script name="ActionDamage" file="scripts/manager_action_damage.lua" />
   </base>
