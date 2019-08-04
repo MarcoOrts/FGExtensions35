@@ -649,6 +649,7 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 			nBonusSituational = nBonusSituational - 1;
 		end
 		if EffectManager35E.hasEffect(rDefender, "Flat-footed") or 
+				EffectManager35E.hasEffect(rDefender, "Flatfooted") or 
 				EffectManager35E.hasEffect(rDefender, "Climbing") or 
 				EffectManager35E.hasEffect(rDefender, "Running") then
 			bCombatAdvantage = true;
@@ -709,9 +710,9 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 		
 		-- GET DEFENDER ALL DEFENSE MODIFIERS
 		local aIgnoreEffects = {};
-		if not bIncorporealAttack then
-			table.insert(aIgnoreEffects, "ghost");
-		end
+		-- if not bIncorporealAttack then
+			-- table.insert(aIgnoreEffects, "ghost");
+		-- end
 		if bTouch then
 			table.insert(aIgnoreEffects, "armor");
 			table.insert(aIgnoreEffects, "shield");
@@ -731,8 +732,8 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 					-- Dodge bonuses stack (by rules)
 					if sBonusType == "dodge" then
 						nBonusAC = nBonusAC + v.mod;
-					elseif sBonusType == "ghost" then
-						nBonusAC = nBonusAC + v.mod;
+					-- elseif sBonusType == "ghost" then
+						-- nBonusAC = nBonusAC + v.mod;
 					-- Size bonuses stack (by usage expectation)
 					elseif sBonusType == "size" then
 						nBonusAC = nBonusAC + v.mod;
@@ -775,12 +776,12 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 		end
 		nBonusStat = nBonusStat + nBonusStat1;
 		local nBonusStat2 = getAbilityEffectsBonus(rDefender, sDefenseStat2);
-		if not bFlatFooted and not bCombatAdvantage  and sDefenseStat2 == "dexterity" then
+		if not bFlatFooted and not bCombatAdvantage and sDefenseStat2 == "dexterity" then
 			nFlatFootedMod = nFlatFootedMod + nBonusStat2;
 		end
 		nBonusStat = nBonusStat + nBonusStat2;
 		local nBonusStat3 = getAbilityEffectsBonus(rDefender, sDefenseStat3);
-		if not bFlatFooted and not bCombatAdvantage  and sDefenseStat3 == "dexterity" then
+		if not bFlatFooted and not bCombatAdvantage and sDefenseStat3 == "dexterity" then
 			nFlatFootedMod = nFlatFootedMod + nBonusStat3;
 		end
 		nBonusStat = nBonusStat + nBonusStat3;
@@ -878,7 +879,7 @@ function getDefenseValue(rAttacker, rDefender, rRoll)
 		elseif bConceal then
 			nMissChance = math.max(20,nMissChance);
 		end
-		
+		-- KEL the following is useless :)
 		if bIncorporealAttack then
 			nMissChance = math.max(50,nMissChance);
 		end

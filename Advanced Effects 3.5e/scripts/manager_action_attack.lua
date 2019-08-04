@@ -153,8 +153,8 @@ function getRoll(rActor, rAction)
             rActionCrit = 19;
         end
     end
-	if rAction.crit and rAction.crit < 20 then
-		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rAction.crit .. "]";
+	if rActionCrit and rActionCrit < 20 then
+		rRoll.sDesc = rRoll.sDesc .. " [CRIT " .. rActionCrit .. "]";
 	end
 	if rAction.touch then
 		rRoll.sDesc = rRoll.sDesc .. " [TOUCH]";
@@ -218,6 +218,11 @@ function modAttack(rSource, rTarget, rRoll)
 	
 	if bOpportunity then
 		table.insert(aAddDesc, "[OPPORTUNITY]");
+		-- KEL AoO
+		local rSourceCTNode = ActorManager.getCTNode(rSource);
+		local aoo = DB.getValue(rSourceCTNode, "aoo", 0) + 1;
+		DB.setValue(rSourceCTNode, "aoo", "number", aoo);
+		--END
 	end
 	if bTouch then
 		if not string.match(rRoll.sDesc, "%[TOUCH%]") then

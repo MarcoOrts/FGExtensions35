@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<root version="3.0" release="1">
+<root version="3.3.8" release="1">
   <properties>
     <name>Advanced 3.5e</name>
     <version>3.3.8</version>
     <author>darrenan (keen) and Kelrugem (rest)</author>
-    <description>Effects for fortification and to half the damage of damage types; also a bug fix for applying correct order of dmg affecting effects. Immediate actions refreshed at the end of ones turn. Added ghost touch and variable concealment VCON: [percentage], [range]. Keen extension of darrenan incorporated, thanks! :) </description>
+    <description>Effects for fortification and to half the damage of damage types; also a bug fix for applying correct order of dmg affecting effects. Added ghost touch and variable concealment VCON: [percentage], [range]. Keen extension of darrenan incorporated, thanks! :) </description>
     <ruleset>
       <name>3.5E</name>
     </ruleset>
@@ -17,7 +17,6 @@
 	<script name="DataCommon" file="scripts/data_common.lua" />
 	<script name="GameSystem" file="scripts/manager_gamesystem.lua" />
 	<script name="ActorManager2" file="scripts/manager_actor2.lua" />
-	<script name="CombatManager2" file="scripts/manager_combat2.lua" />
 	<script name="ActionAttack" file="scripts/manager_action_attack.lua" />
     <script name="ActionDamage" file="scripts/manager_action_damage.lua" />
   </base>
