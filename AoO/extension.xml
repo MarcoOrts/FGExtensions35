@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root version="3.0" release="1">
+  <properties>
+    <name>AoO</name>
+    <version>1</version>
+    <author>Kelrugem</author>
+    <description>AoO tracker.</description>
+    <ruleset>
+      <name>3.5E</name>
+    </ruleset>
+	<ruleset>
+      <name>PFRPG</name>
+    </ruleset>
+  </properties>
+  <base>
+    <!-- Initialization -->
+    <script name="AoO" file="scripts/AoO.lua" />
+
+	<!-- Strings -->
+    <includefile source="strings/strings_35e.xml" />
+	<!-- Combat tracker -->
+    <includefile source="ct/ct_host.xml" />
+	<!-- High level scripts -->
+	<script name="CombatManager2" file="scripts/manager_combat2.lua" />
+	<script name="ActionAttack" file="scripts/manager_action_attack.lua" />
+  </base>
+</root>
