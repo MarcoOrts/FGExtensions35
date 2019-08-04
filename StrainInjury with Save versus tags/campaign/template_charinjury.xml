@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+  <template name="number_charinjury">
+    <number_dropadd>
+      <hideonvalue value="0" />
+      <script>
+        function onInit()
+			if super.onInit then
+				super.onInit();
+			end
+
+			OptionsManager.registerCallback("WNDC", onValueChanged);
+			onValueChanged();
+        end
+
+        function onClose()
+            OptionsManager.unregisterCallback("WNDC", onValueChanged);
+        end
+
+        function onDrop(x, y, draginfo)
+			if draginfo.getType() == "number" then
+				local rActor = ActorManager.getActor("pc", window.getDatabaseNode());
+				ActionDamage.applyDamage(nil, rActor, false, "number", draginfo.getDescription() .. "[INJURY]", draginfo.getNumberData());
+			end
+
+			return true;
+        end
+
+        function onValueChanged()
+			window.onHealthChanged();
+        end
+      </script>
+    </number_dropadd>
+  </template>
+</root>
