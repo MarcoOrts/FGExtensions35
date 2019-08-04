@@ -2,7 +2,7 @@
 -- Please see the license.html file included with this distribution for 
 -- attribution and copyright information.
 --
-
+-- KEL Add OOB messages for tag effects
 OOB_MSGTYPE_APPLYSAVE = "applysave";
 
 function onInit()
@@ -108,6 +108,7 @@ function getVsRoll(rActor, sSave, rSource, sSaveDesc, tags)
 	local sAbility = nil;
 	local sActorType, nodeActor = ActorManager.getTypeAndNode(rActor);
 	if nodeActor then
+		-- Debug.console(nodeActor);
 		if sActorType == "pc" then
 			rRoll.nMod = DB.getValue(nodeActor, "saves." .. sSave .. ".total", 0);
 			sAbility = DB.getValue(nodeActor, "saves." .. sSave .. ".ability", "");
@@ -130,63 +131,62 @@ function getVsRoll(rActor, sSave, rSource, sSaveDesc, tags)
 	local transmutation = (sSaveDesc:match("%[TRANSMUTATION%]") ~= nil);
 	local universal = (sSaveDesc:match("%[UNIVERSAL%]") ~= nil);
 	-- Adding auxiliary effect
-	local rEffectSpell = {};
-	rEffectSpell.sName = "tagsistagsKelrugemSave;";
-	rEffectSpell.nDuration = 1;
-	rEffectSpell.nInit = 0;
-	rEffectSpell.nGMOnly = 1;
-    rEffectSpell.sApply = "";
+	-- local rEffectSpell = {};
+	-- rEffectSpell.sName = "tagsistagsKelrugemSave;";
+	-- rEffectSpell.nDuration = 1;
+	-- rEffectSpell.nInit = 0;
+	-- rEffectSpell.nGMOnly = 1;
+    -- rEffectSpell.sApply = "";
 	
 	if spell then
 		rRoll.sDesc = rRoll.sDesc .. " [SPELL]";
-        rEffectSpell.sName = rEffectSpell.sName.. "spell;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "spell;";
 	end
 	if spelllike then
 		rRoll.sDesc = rRoll.sDesc .. " [SPELLLIKE]";
-		rEffectSpell.sName = rEffectSpell.sName.. "spelllike;";
+		-- rEffectSpell.sName = rEffectSpell.sName.. "spelllike;";
 	end
 	
 	if abjuration then
 		rRoll.sDesc = rRoll.sDesc .. " [ABJURATION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "abjuration;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "abjuration;";
 	end
 	if conjuration then
 		rRoll.sDesc = rRoll.sDesc .. " [CONJURATION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "conjuration;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "conjuration;";
 	end
 	if divination then
 		rRoll.sDesc = rRoll.sDesc .. " [DIVINATION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "divination;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "divination;";
 	end
 	if enchantment then
 		rRoll.sDesc = rRoll.sDesc .. " [ENCHANTMENT]";
-        rEffectSpell.sName = rEffectSpell.sName.. "enchantment;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "enchantment;";
 	end
 	if evocation then
 		rRoll.sDesc = rRoll.sDesc .. " [EVOCATION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "evocation;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "evocation;";
 	end
 	if illusion then
 		rRoll.sDesc = rRoll.sDesc .. " [ILLUSION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "illusion;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "illusion;";
 	end
 	if necromancy then
 		rRoll.sDesc = rRoll.sDesc .. " [NECROMANCY]";
-        rEffectSpell.sName = rEffectSpell.sName.. "necromancy;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "necromancy;";
 	end
 	if transmutation then
 		rRoll.sDesc = rRoll.sDesc .. " [TRANSMUTATION]";
-        rEffectSpell.sName = rEffectSpell.sName.. "transmutation;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "transmutation;";
 	end
 	if universal then
 		rRoll.sDesc = rRoll.sDesc .. " [UNIVERSAL]";
-        rEffectSpell.sName = rEffectSpell.sName.. "universal;";
+        -- rEffectSpell.sName = rEffectSpell.sName.. "universal;";
 	end
 	if tags ~= "" then
 		rRoll.sDesc = rRoll.sDesc .. " [Other tags: " .. tags .. "]";
 	end
-	rEffectSpell.sName = rEffectSpell.sName.. tags;
-	EffectManager.addEffect("", "", ActorManager.getCTNode(rActor), rEffectSpell, false);
+	-- rEffectSpell.sName = rEffectSpell.sName.. tags;
 	
 	-- END auxiliary effect
 	
@@ -286,18 +286,7 @@ function modSave(rSource, rTarget, rRoll)
 		if sSave then
 			table.insert(aSaveFilter, sSave);
 		end
-		
-		-- Get effect modifiers
-		local rSaveSource = nil;
-		if rRoll.sSource then
-			rSaveSource = ActorManager.getActor("ct", rRoll.sSource);
-		end
-		local nEffectCount;
-		aAddDice, nAddMod, nEffectCount = EffectManager35E.getEffectsBonus(rSource, "SAVE", false, aSaveFilter, rSaveSource);
-		if (nEffectCount > 0) then
-			bEffects = true;
-		end
-		local sSourceType, nodeSource = ActorManager.getTypeAndNode(rSource);
+		-- KEL Tags
 		local spell = (rRoll.sDesc:match("%[SPELL%]") ~= nil);
 		local spelllike = (rRoll.sDesc:match("%[SPELLLIKE%]") ~= nil);
 		local abjuration = (rRoll.sDesc:match("%[ABJURATION%]") ~= nil);
@@ -310,51 +299,61 @@ function modSave(rSource, rTarget, rRoll)
 		local transmutation = (rRoll.sDesc:match("%[TRANSMUTATION%]") ~= nil);
 		local universal = (rRoll.sDesc:match("%[UNIVERSAL%]") ~= nil);
 		
-		local sEffectSpell = {};
+		local sEffectSpell = "";
 	
-		sEffectSpell.nDuration = 1;
-		sEffectSpell.sName = "tagsistagsKelrugemSave;";
-		sEffectSpell.nInit = 0;
-		sEffectSpell.nGMOnly = 1;
-		sEffectSpell.sApply = "";
+		-- sEffectSpell.nDuration = 1;
+		-- sEffectSpell.sName = "tagsistagsKelrugemSave;";
+		-- sEffectSpell.nInit = 0;
+		-- sEffectSpell.nGMOnly = 1;
+		-- sEffectSpell.sApply = "";
 		
 		if spell then	
-			sEffectSpell.sName = sEffectSpell.sName.. "spell;";
+			sEffectSpell = sEffectSpell.. "spell;";
 		end
 		if spelllike then
-			sEffectSpell.sName = sEffectSpell.sName.. "spelllike;";
+			sEffectSpell = sEffectSpell.. "spelllike;";
 		end
 		if abjuration then
-			sEffectSpell.sName = sEffectSpell.sName.. "abjuration;";
+			sEffectSpell = sEffectSpell.. "abjuration;";
 		end
 		if conjuration then
-			sEffectSpell.sName = sEffectSpell.sName.. "conjuration;";
+			sEffectSpell = sEffectSpell.. "conjuration;";
 		end
 		if divination then
-			sEffectSpell.sName = sEffectSpell.sName.. "divination;";
+			sEffectSpell = sEffectSpell.. "divination;";
 		end
 		if enchantment then
-			sEffectSpell.sName = sEffectSpell.sName.. "enchantment;";
+			sEffectSpell = sEffectSpell.. "enchantment;";
 		end
 		if evocation then
-			sEffectSpell.sName = sEffectSpell.sName.. "evocation;";
+			sEffectSpell = sEffectSpell.. "evocation;";
 		end
 		if illusion then
-			sEffectSpell.sName = sEffectSpell.sName.. "illusion;";
+			sEffectSpell = sEffectSpell.. "illusion;";
 		end
 		if necromancy then
-			sEffectSpell.sName = sEffectSpell.sName.. "necromancy;";
+			sEffectSpell = sEffectSpell.. "necromancy;";
 		end
 		if transmutation then
-			sEffectSpell.sName = sEffectSpell.sName.. "transmutation;";
+			sEffectSpell = sEffectSpell.. "transmutation;";
 		end
 		if universal then
-			sEffectSpell.sName = sEffectSpell.sName.. "universal;";
+			sEffectSpell = sEffectSpell.. "universal;";
 		end
 		local tags = rRoll.tags;
 		
-		sEffectSpell.sName = sEffectSpell.sName.. tags;
-		EffectManager.removeEffect(ActorManager.getCTNode(rSource), sEffectSpell.sName);
+		sEffectSpell = sEffectSpell.. tags;
+		
+		-- Get effect modifiers
+		local rSaveSource = nil;
+		if rRoll.sSource then
+			rSaveSource = ActorManager.getActor("ct", rRoll.sSource);
+		end
+		local nEffectCount;
+		aAddDice, nAddMod, nEffectCount = EffectManager35E.getTagEffectsBonus(rSource, "SAVE", false, aSaveFilter, rSaveSource, sEffectSpell);
+		if (nEffectCount > 0) then
+			bEffects = true;
+		end
 		
 		-- Get condition modifiers
 		if EffectManager35E.hasEffectCondition(rSource, "Frightened") or 
@@ -363,7 +362,6 @@ function modSave(rSource, rTarget, rRoll)
 			nAddMod = nAddMod - 2;
 			bEffects = true;
 		end
-		
 		
 		if EffectManager35E.hasEffectCondition(rSource, "Sickened") then
 			nAddMod = nAddMod - 2;
@@ -399,7 +397,6 @@ function modSave(rSource, rTarget, rRoll)
 			end
 			table.insert(aAddDesc, sEffects);
 		end
-		
 	end
 	
 	if #aAddDesc > 0 then
@@ -441,7 +438,6 @@ function onSave(rSource, rTarget, rRoll)
 	end
 end
 
-	
 function applySave(rSource, rOrigin, rAction, sUser)
 	local msgShort = {font = "msgfont"};
 	local msgLong = {font = "msgfont"};

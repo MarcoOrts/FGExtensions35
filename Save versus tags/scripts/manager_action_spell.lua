@@ -37,7 +37,7 @@ function handleApplySave(msgOOB)
 		end
 	end
 end
-
+-- KEL Add tags
 function notifyApplySave(rSource, rTarget, bSecret, sDesc, nDC, bRemoveOnMiss, tags)
 	if not rTarget then
 		return;
@@ -53,7 +53,7 @@ function notifyApplySave(rSource, rTarget, bSecret, sDesc, nDC, bRemoveOnMiss, t
 	end
 	msgOOB.sDesc = sDesc;
 	msgOOB.nDC = nDC;
-	msgOOB.stype = stype;
+	-- msgOOB.stype = stype;
 	msgOOB.tags = tags;
 
 	local sSourceType, sSourceNode = ActorManager.getTypeAndNodeName(rSource);
@@ -100,6 +100,7 @@ end
 function onSpellTargeting(rSource, aTargeting, rRolls)
 	local bRemoveOnMiss = false;
 	local sOptRMMT = OptionsManager.getOption("RMMT");
+	
 	if sOptRMMT == "on" then
 		bRemoveOnMiss = true;
 	elseif sOptRMMT == "multi" then
@@ -316,28 +317,24 @@ end
 
 function onSpellCast(rSource, rTarget, rRoll)
 	local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
+	-- Debug.console(rMessage);
 	rMessage.dice = nil;
 	rMessage.icon = "spell_cast";
 
 	if rTarget then
 		rMessage.text = rMessage.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
 		-- Adding immunity against tags
-		local rEffectSpell = {};
+		local rEffectSpell = "";
 		local semicolon = ";";
-		rEffectSpell.sName = "tagsistagsKelrugemImmun;" .. rRoll.spelltype .. semicolon .. rRoll.school .. semicolon .. rRoll.tags;
-		rEffectSpell.nDuration = 1;
-		rEffectSpell.nInit = 0;
-		rEffectSpell.nGMOnly = 1;
-		rEffectSpell.sApply = "";
+		rEffectSpell = rRoll.spelltype .. semicolon .. rRoll.school .. semicolon .. rRoll.tags;
 		
-		EffectManager.addEffect("", "", ActorManager.getCTNode(rTarget), rEffectSpell, false);
-		
-		local spellImmunity = EffectManager35E.hasEffect(rTarget, "SIMMUNE");
+		local spellImmunity = EffectManager35E.hasTagEffect(rTarget, "SIMMUNE", rEffectSpell);
 		
 		EffectManager.removeEffect(ActorManager.getCTNode(rTarget), rEffectSpell.sName);
 		
 		if spellImmunity then
-			rMessage.text = rMessage.text .. "[FAILURE]";
+			rMessage.text = rMessage.text .. "[IMMUNE]";
+			rMessage.icon = "spell_fail";
 			if rSource then
 				local bRemoveTargetanders = false;
 				if OptionsManager.isOption("RMMT", "on") then
@@ -358,22 +355,12 @@ end
 
 function onCastCLC(rSource, rTarget, rRoll)
 	if rTarget then
-		-- Get SR modifier effects and combination with tags
-		-- local rEffectSpell = {};
-		-- local semicolon = ";";
-		-- rEffectSpell.sName = "tagsistagsKelrugemSR1;" .. rRoll.spelltype .. semicolon .. rRoll.school .. semicolon .. rRoll.tags;
-		-- rEffectSpell.nDuration = 1;
-		-- rEffectSpell.nInit = 0;
-		-- rEffectSpell.nGMOnly = 1;
-		-- rEffectSpell.sApply = "";
-		
-		-- EffectManager.addEffect("", "", ActorManager.getCTNode(rTarget), rEffectSpell, false);
 		
 		local nSRMod, nSRCount = EffectManager35E.getEffectsBonus(rTarget, {"SR"}, true, nil, rSource);
 		
 		-- EffectManager.removeEffect(ActorManager.getCTNode(rTarget), rEffectSpell.sName);
 		
-		local nSR = math.max(ActorManager2.getSpellDefense(rTarget) + nSRMod);
+		local nSR = math.max(ActorManager2.getSpellDefense(rTarget), nSRMod);
 		if nSR > 0 then
 			if not string.match(rRoll.sDesc, "%[SR NOT ALLOWED%]") then
 				local rRoll = { sType = "clc", sDesc = rRoll.sDesc, aDice = {"d20"}, nMod = rRoll.nMod, bRemoveOnMiss = rRoll.bRemoveOnMiss };
@@ -393,6 +380,7 @@ function onCastSave(rSource, rTarget, rRoll)
 			local sSave = DataCommon.save_stol[sSaveShort];
 			if sSave then
 			-- add Tags in arguments
+				-- EffectManager.addEffect("", "", ActorManager.getCTNode(rTarget), rEffectSpell, false);
 				notifyApplySave(rSource, rTarget, rRoll.bSecret, rRoll.sDesc, rRoll.nMod, rRoll.bRemoveOnMiss, rRoll.tags);
 				return true;
 			end

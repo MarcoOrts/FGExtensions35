@@ -16,6 +16,9 @@
     <!-- Initialization -->
     <script name="SaveVersusTags" file="scripts/save_versus_tags.lua" />
 	
+	<!-- Graphics -->
+	<includefile source="graphics/graphics_icons.xml" />
+	
 	<!-- Strings -->
 	<includefile source="strings/strings_35e.xml" />
 	
@@ -23,8 +26,9 @@
 	<includefile source="campaign/record_spell_roll.xml" />
 	
     <!-- High-level scripts -->
-	<!-- <script name="TargetingManager" file="scripts/manager_targeting.lua" /> -->
+	<script name="EffectManager35E" file="scripts/manager_effect_35E.lua" />
 	<script name="SpellManager" file="scripts/manager_spell.lua" />
+	<!-- <script name="TokenManager2" file="scripts/manager_token2.lua" /> -->
 	<script name="ActionSave" file="scripts/manager_action_save.lua" />
 	<script name="ActionSpell" file="scripts/manager_action_spell.lua" />
   </base>
