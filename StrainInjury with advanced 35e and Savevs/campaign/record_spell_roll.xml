@@ -160,6 +160,8 @@
 				<static textres="power_label_onmissdamage" />
 			</label_fieldtop>
 			
+			<!-- Save versus Tags boxes -->
+			
 			<button_stringcycler name="school">
 				<anchored to="onmissdamage" position="righthigh" offset="20" width="100" height="20" />
 				<parameters>
@@ -191,6 +193,9 @@
 				<center />
 			</header_column>
 			<string_column_full name="othertags" />
+			
+			<!-- END: Save versus Tags boxes -->
+			
 		</sheetdata>
 	</windowclass>
 

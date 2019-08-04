@@ -37,7 +37,7 @@ function handleApplySave(msgOOB)
 		end
 	end
 end
-
+-- KEL Add tags
 function notifyApplySave(rSource, rTarget, bSecret, sDesc, nDC, bRemoveOnMiss, tags)
 	if not rTarget then
 		return;
@@ -53,7 +53,7 @@ function notifyApplySave(rSource, rTarget, bSecret, sDesc, nDC, bRemoveOnMiss, t
 	end
 	msgOOB.sDesc = sDesc;
 	msgOOB.nDC = nDC;
-	msgOOB.stype = stype;
+	-- msgOOB.stype = stype;
 	msgOOB.tags = tags;
 
 	local sSourceType, sSourceNode = ActorManager.getTypeAndNodeName(rSource);
@@ -100,6 +100,7 @@ end
 function onSpellTargeting(rSource, aTargeting, rRolls)
 	local bRemoveOnMiss = false;
 	local sOptRMMT = OptionsManager.getOption("RMMT");
+	
 	if sOptRMMT == "on" then
 		bRemoveOnMiss = true;
 	elseif sOptRMMT == "multi" then
@@ -132,6 +133,10 @@ function getSpellCastRoll(rActor, rAction)
 		rRoll.sDesc = rRoll.sDesc .. " #" .. rAction.order;
 	end
 	rRoll.sDesc = rRoll.sDesc .. "] " .. rAction.label;
+	-- Adding new information
+	rRoll.school = rAction.school;
+	rRoll.spelltype = rAction.stype;
+	rRoll.tags = rAction.tags;
 	
 	return rRoll;
 end
@@ -150,6 +155,10 @@ function getCLCRoll(rActor, rAction)
 	if rAction.sr == "no" then
 		rRoll.sDesc = rRoll.sDesc .. " [SR NOT ALLOWED]";
 	end
+	-- Adding new information
+	rRoll.school = rAction.school;
+	rRoll.spelltype = rAction.stype;
+	rRoll.tags = rAction.tags;
 	
 	return rRoll;
 end
@@ -182,6 +191,7 @@ function getSaveVsRoll(rActor, rAction)
 	if rAction.onmissdamage == "half" then
 		rRoll.sDesc = rRoll.sDesc .. " [HALF ON SAVE]";
 	end
+	-- Save versus tags new descriptions
 	if rAction.stype == "spell" then
 		rRoll.sDesc = rRoll.sDesc .. " [SPELL]";
 	end
@@ -215,9 +225,12 @@ function getSaveVsRoll(rActor, rAction)
 	if rAction.school == "universal" then
 		rRoll.sDesc = rRoll.sDesc .. " [UNIVERSAL]";
 	end
-	if rAction.tags then
+	if rAction.tags ~= "" then
 		rRoll.sDesc = rRoll.sDesc .. " [Other tags: " .. rAction.tags .. "]";
 	end
+	-- END new descriptions
+	
+	-- Save the new tags information (of the bottom line)
 	rRoll.tags = rAction.tags;
 	
 	return rRoll;
@@ -304,11 +317,37 @@ end
 
 function onSpellCast(rSource, rTarget, rRoll)
 	local rMessage = ActionsManager.createActionMessage(rSource, rRoll);
+	-- Debug.console(rMessage);
 	rMessage.dice = nil;
 	rMessage.icon = "spell_cast";
 
 	if rTarget then
 		rMessage.text = rMessage.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
+		-- Adding immunity against tags
+		local rEffectSpell = "";
+		local semicolon = ";";
+		rEffectSpell = rRoll.spelltype .. semicolon .. rRoll.school .. semicolon .. rRoll.tags;
+		
+		local spellImmunity = EffectManager35E.hasTagEffect(rTarget, "SIMMUNE", rEffectSpell);
+		
+		EffectManager.removeEffect(ActorManager.getCTNode(rTarget), rEffectSpell.sName);
+		
+		if spellImmunity then
+			rMessage.text = rMessage.text .. "[IMMUNE]";
+			rMessage.icon = "spell_fail";
+			if rSource then
+				local bRemoveTargetanders = false;
+				if OptionsManager.isOption("RMMT", "on") then
+					bRemoveTargetanders = true;
+				elseif rRoll.bRemoveOnMiss then
+					bRemoveTargetanders = true;
+				end
+						
+				if bRemoveTargetanders then
+					TargetingManager.removeTarget(ActorManager.getCTNode(rSource), ActorManager.getCTNode(rTarget));
+				end
+			end
+		end
 	end
 	
 	Comm.deliverChatMessage(rMessage);
@@ -316,7 +355,12 @@ end
 
 function onCastCLC(rSource, rTarget, rRoll)
 	if rTarget then
-		local nSR = ActorManager2.getSpellDefense(rTarget);
+		
+		local nSRMod, nSRCount = EffectManager35E.getEffectsBonus(rTarget, {"SR"}, true, nil, rSource);
+		
+		-- EffectManager.removeEffect(ActorManager.getCTNode(rTarget), rEffectSpell.sName);
+		
+		local nSR = math.max(ActorManager2.getSpellDefense(rTarget), nSRMod);
 		if nSR > 0 then
 			if not string.match(rRoll.sDesc, "%[SR NOT ALLOWED%]") then
 				local rRoll = { sType = "clc", sDesc = rRoll.sDesc, aDice = {"d20"}, nMod = rRoll.nMod, bRemoveOnMiss = rRoll.bRemoveOnMiss };
@@ -335,6 +379,8 @@ function onCastSave(rSource, rTarget, rRoll)
 		if sSaveShort then
 			local sSave = DataCommon.save_stol[sSaveShort];
 			if sSave then
+			-- add Tags in arguments
+				-- EffectManager.addEffect("", "", ActorManager.getCTNode(rTarget), rEffectSpell, false);
 				notifyApplySave(rSource, rTarget, rRoll.bSecret, rRoll.sDesc, rRoll.nMod, rRoll.bRemoveOnMiss, rRoll.tags);
 				return true;
 			end
@@ -351,10 +397,25 @@ function onCLC(rSource, rTarget, rRoll)
 	local bSRAllowed = not string.match(rRoll.sDesc, "%[SR NOT ALLOWED%]");
 	
 	if rTarget then
+		-- Add auxiliary effect
+		-- local rEffectSpell = {};
+		-- local semicolon = ";";
+		-- rEffectSpell.sName = "tagsistagsKelrugemSR2;" .. rRoll.spelltype .. semicolon .. rRoll.school .. semicolon .. rRoll.tags;
+		-- rEffectSpell.nDuration = 1;
+		-- rEffectSpell.nInit = 0;
+		-- rEffectSpell.nGMOnly = 1;
+		-- rEffectSpell.sApply = "";
+				
+		-- EffectManager.addEffect("", "", ActorManager.getCTNode(rTarget), rEffectSpell, false);
+		
+		-- Get SR modifier effects
+		local nSRMod, nSRCount = EffectManager35E.getEffectsBonus(rTarget, {"SR"}, true, nil, rSource);
+		
+		-- EffectManager.removeEffect(ActorManager.getCTNode(rTarget), rEffectSpell.sName);
 		rMessage.text = rMessage.text .. " [at " .. ActorManager.getDisplayName(rTarget) .. "]";
 		
 		if bSRAllowed then
-			local nSR = ActorManager2.getSpellDefense(rTarget);
+			local nSR = math.max(ActorManager2.getSpellDefense(rTarget),nSRMod);
 			if nSR > 0 then
 				if nTotal >= nSR then
 					rMessage.text = rMessage.text .. " [SUCCESS]";

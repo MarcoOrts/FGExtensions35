@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<root version="3.3.7" release="3">
+<root version="3.3.8" release="3">
 	<properties>
 		<name>Strain and Injury HP Variant Rules with SaveVs and advanced Effects 3.5e</name>
 		<version>1.20</version>
@@ -13,6 +13,9 @@
     
     <!-- Initialization -->
     <script name="StrainInjury" file="scripts/straininjury.lua" />
+	
+	<!-- Graphics -->
+	<includefile source="graphics/graphics_icons.xml" />
     
     <!-- Strings -->
     <includefile source="strings/strings_35e_2.xml" />
@@ -37,16 +40,18 @@
 	<script name="PartyManager2" file="ps/scripts/manager_ps2.lua" />
 
 	<!-- High-level scripts -->
+	<script name="EffectManager35E" file="scripts/manager_effect_35E.lua" />
+	<script name="DataCommon" file="scripts/data_common.lua" />
     <script name="GameSystem" file="scripts/manager_gamesystem.lua" />
     <script name="SpellManager" file="scripts/manager_spell.lua" />
     <script name="ActorManager2" file="scripts/manager_actor2.lua" />
     <script name="CombatManager2" file="scripts/manager_combat2.lua" />
+	<script name="ActionAttack" file="scripts/manager_action_attack.lua" />
     <script name="ActionDamage" file="scripts/manager_action_damage.lua" />
 	<script name="ActionSave" file="scripts/manager_action_save.lua" />
 	<script name="ActionSpell" file="scripts/manager_action_spell.lua" />
-	<script name="DataCommon" file="scripts/data_common.lua" />
 
-    <!-- Overwrites the applyOngoingDamageAdjustment function from manager_effect.lua -->
+    <!-- Overwrites the applyOngoingDamageAdjustment function from manager_effect_35E.lua -->
     <script name="EffectManager2" file="scripts/manager_effect2.lua" />
     
     <!-- Adds updateHealth handler for injury fields. -->
