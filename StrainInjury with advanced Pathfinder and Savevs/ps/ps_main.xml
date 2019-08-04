@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<!-- 
+  Please see the license.html file included with this distribution for 
+  attribution and copyright information.
+-->
+
+<root>
+	<windowclass name="ps_mainitem" merge="join">
+		<script file="ps/scripts/ps_mainitem.lua" />
+		<sheetdata>
+			<hnx name="hptotal">
+				<script>
+					function onValueChanged()
+						window.onHealthChanged();
+					end
+				</script>
+			</hnx>
+			<hnx name="hptemp">
+				<script>
+					function onValueChanged()
+						window.onHealthChanged();
+					end
+				</script>
+			</hnx>
+			<hnx name="wounds">
+				<script>
+					function onValueChanged()
+						window.onHealthChanged();
+					end
+				</script>
+			</hnx>
+			<hnx name="nonlethal" merge="delete"/>
+			<hnx name="injury">
+				<script>
+					function onValueChanged()
+						window.onHealthChanged();
+					end
+				</script>
+			</hnx>
+		</sheetdata>
+	</windowclass>
+</root>
