@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<!--
+	'Fantasy Grounds' is a trademark of SmiteWorks USA, LLC. 'Fantasy Grounds' is Copyright 2004-2014 SmiteWorks USA LLC.
+	The CoreRPG ruleset and all included files are copyright 2004-2013, Smiteworks USA LLC.
+-->
+
+<root>
+    <icon name="tool_clear_saves_30" file="graphics/toolbar/tool_clear_saves_30.png" />
+</root>
